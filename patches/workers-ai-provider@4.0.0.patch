@@ -1,0 +1,14 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 764cbf5325502a9836710b1c218e03d2356cd192..c6098d039f01708f0edac3450a924d04e6c6d274 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -703,7 +703,8 @@ function getMappedStream(response, salvageContext) {
+ 			if (choiceFinishReason != null) finishReason = mapWorkersAIFinishReason(choiceFinishReason);
+ 			else if (directFinishReason != null) finishReason = mapWorkersAIFinishReason(directFinishReason);
+ 			const nativeResponse = chunk.response;
+-			if (nativeResponse != null && nativeResponse !== "") {
++			// natbot patch: Workers AI now sends the same text in both `response` and `choices[0].delta.content`; read `response` only when the delta has no text.
++			if (nativeResponse != null && nativeResponse !== "" && !choices?.[0]?.delta?.content) {
+ 				const responseText = String(nativeResponse);
+ 				if (responseText.length > 0) if (bufferContentForSalvage) contentBuffer += responseText;
+ 				else {
