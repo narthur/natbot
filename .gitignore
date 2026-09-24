@@ -1,5 +1,5 @@
 node_modules
 dist
 .wrangler
-.static-analysis
+.code-analysis
 *.tsbuildinfo

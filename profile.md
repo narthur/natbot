@@ -59,7 +59,7 @@ Beeminder is a goal-tracking service and a client of Nathan's. His main project 
 
 SimpleUpdates made a custom CMS for churches. The CMS was already built when Nathan joined; his work was mainly on its themes.
 
-- He built and documented a shared component library, following atomic-design principles, used across the CMS's themes, and moved the existing themes onto it. Fixes could then be copied into every theme without reworking them for each one.
+- He built and documented a shared component library, following atomic-design principles, used across the CMS's themes, and moved the existing themes onto it. A fix to a shared component could then usually be copied into the other themes without reworking it, because he never made theme-specific edits to the shared base.
 - He pushed for platform features the theme framework needed and got some of them added, including a template function that picks the higher-contrast of two colors against a third, an accessibility feature.
 - He wrote a separate service in Python, Flask and SQLite that server-rendered a web page for any church or school in a denominational directory that had no website of its own, and redirected to the organization's own site when it had one.
 - He did JavaScript development on a church-management product that never launched.
@@ -83,18 +83,17 @@ B.B.A. in Business Administration, Ouachita Hills College, 2012 to 2016, includi
 - **buzz**: a terminal interface for Beeminder, written in Go. The Go was written by AI agents; Nathan holds its quality through tests and CI checks rather than by reading the code.
 - **baserow-sdk**: a TypeScript client for the Baserow API. He concluded afterwards that a thin wrapper around the API would have been the better choice.
 - **pyminder**: a Python library for the Beeminder API, published on PyPI.
-- **Eras** (eras.nathanarthur.com): a spare-time experiment, a persistent world simulation that runs continuously on a Cloudflare Durable Object and streams to viewers over a WebSocket.
 - **Claude Code skills** (github.com/narthur/skills): skills and tooling he builds with the agent and revises as they break down in use.
 - This chat bot, whose source and prompt history are public at github.com/narthur/natbot.
 
 ## Skills
 
-- **Languages:** TypeScript and JavaScript (daily); Python (has built with it, including TaskRatchet's first API, but doesn't currently work in it); PHP (WordPress themes and plugins, mostly during college; rusty); Ruby (a learner, from the past couple of years in a Rails codebase); SQL.
+- **Languages:** TypeScript and JavaScript (daily); Python (has built with it, including TaskRatchet's first API, but doesn't currently work in it); PHP (WordPress themes and plugins, mostly during college; rusty); Ruby (a learner, from the past couple of years in client Rails codebases); SQL.
 - **Frontend:** React, Next.js, Astro, Svelte and SvelteKit, Tailwind, React Query, component libraries, accessibility.
 - **Backend:** Node.js, Hono, NestJS, GraphQL, REST APIs, OpenAPI, OAuth 2.1 and OIDC, Stripe, MCP servers.
-- **Data:** database design and normalization (he owns TaskRatchet's production schema), Cloudflare D1, SQLite, PostgreSQL, Drizzle. He leans on tools and documentation for query optimization.
+- **Data:** database design and normalization (he owns TaskRatchet's production schema), Cloudflare D1, SQLite, PostgreSQL. He leans on tools and documentation for query optimization.
 - **Cloud:** Cloudflare (Workers, D1, KV, R2, Durable Objects) most of all, plus Render, Google Cloud, and some AWS.
-- **Tooling and practice:** GitHub Actions and CI/CD, Vitest, Playwright, Docker (mostly for local development, in the past), observability with Honeycomb, OpenTelemetry and Sentry.
+- **Tooling and practice:** GitHub Actions and CI/CD, Vitest, Docker (mostly for local development, in the past), observability with Honeycomb, OpenTelemetry and Sentry.
 - **AI-assisted development:** He has developed with Claude Code daily since early 2026, and holds quality through automation (tests, CI checks, automated review) rather than manual rigor.
 
 ## What he hasn't done
@@ -113,7 +112,7 @@ B.B.A. in Business Administration, Ouachita Hills College, 2012 to 2016, includi
 ## Views and motivations
 
 - **Why he's looking for a job after contracting.** He enjoys working directly with stakeholders to understand problems and design solutions. But running a very small agency means sales outreach, overhead and unpredictable income, and he'd rather set those aside for technical challenges that push him deeper. He has spent his whole career in very small organizations, which build breadth but rarely leave room to go deep on something.
-- **Where he's looking.** He is open to roles in the US and in Sweden.
+- **Where he's looking.** He is open to roles in the US and in Europe, with Sweden as a particular focus.
 - **What he's proud of.** What his software does for people more than any technical problem he solved: TaskRatchet genuinely helps people who struggle with procrastination, and autodial saves Beeminder users a chore.
 - **Quality as code gets cheaper.** He believes that the easier it gets to write and change code, the more developers need to lean on tooling to keep quality from slipping, which means deciding where to add friction, where to remove it, and which tasks stay with the developer.
 - **Value for effort.** Every place he has worked has been resource-constrained, so he favors solutions with high value for the effort that keep working without constant maintenance.
