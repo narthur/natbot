@@ -4,13 +4,28 @@ import {
   type LanguageModel,
   type ModelMessage,
   streamText,
+  tool,
   type UIMessage,
 } from "ai";
+import { z } from "zod";
 import { SYSTEM_PROMPT } from "./prompt";
 
 export const MAX_QUESTION_CHARS = 2000;
 // Keeps the prompt well inside the model's context alongside the Profile (ADR 0002): 24k tokens for the Llama 3.3 chosen in chat.ts.
 export const HISTORY_TURNS = 10;
+
+/**
+ * The model's only tool, and it has no effect (ADR 0003): it just puts a draft Handoff on the page.
+ * Sending takes the Visitor pressing Send, which calls a method the model can't reach.
+ */
+const draftHandoff = tool({
+  description:
+    "Offer the visitor a draft message to Nathan containing their question, which they can edit and choose to send. Use only when the question is about Nathan's career and the profile doesn't answer it.",
+  inputSchema: z.object({ question: z.string().describe("The visitor's question, as they asked it") }),
+  execute: async () => ({ drafted: true }),
+});
+
+export const OFFERED_HANDOFF = "The profile doesn't answer this, so I offered to send the question to Nathan.";
 
 /** A completed exchange this server produced. The only history the model ever sees. */
 export type Turn = { question: string; answer: string };
@@ -68,13 +83,17 @@ export async function answer(
     model: deps.model,
     system: SYSTEM_PROMPT,
     messages: modelMessages(deps.history.recent(HISTORY_TURNS), question),
+    tools: { draftHandoff },
     maxOutputTokens: 600,
     // One accepted question spends one Budget slot, so keep retries from multiplying the real calls behind it.
     maxRetries: 1,
     abortSignal,
-    onFinish: ({ text }) => {
-      // An empty answer would be replayed as history on every later call.
-      if (text.trim()) deps.history.record({ question, answer: text });
+    onFinish: ({ text, toolCalls }) => {
+      // The model sometimes offers a draft without writing anything; record what happened so history and
+      // Handoff emails still show the question. A truly empty answer would be replayed as history, so skip it.
+      const offered = toolCalls.some((c) => c.toolName === "draftHandoff");
+      const recorded = text.trim() ? text : offered ? OFFERED_HANDOFF : "";
+      if (recorded) deps.history.record({ question, answer: recorded });
     },
   });
   // The default hides error details from the client; this gives the visitor something to act on.

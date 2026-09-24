@@ -3,8 +3,9 @@ import { useAgent } from "agents/react";
 import type { UIMessage } from "ai";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { HandoffCard } from "./HandoffCard";
 import { useTurnstile } from "./turnstile";
-import type { ChatState } from "./worker/chat";
+import type { ChatAgent, ChatState } from "./worker/chat";
 
 const starterQuestions = [
   "What has Nathan built?",
@@ -25,20 +26,43 @@ function conversationId(): string {
   }
 }
 
-/** Failed turns can leave assistant messages with no text; there is nothing to show for them. */
-const hasText = (m: UIMessage) => m.parts.some((p) => p.type === "text" && p.text.trim());
+type Part = UIMessage["parts"][number];
+/** The model's draftHandoff call (ADR 0003), if this part is one. */
+const draft = (p: Part) =>
+  p.type === "tool-draftHandoff" && "state" in p && (p.state === "input-available" || p.state === "output-available")
+    ? { id: p.toolCallId, question: (p.input as { question?: string } | undefined)?.question ?? "" }
+    : undefined;
+
+/** Failed turns can leave assistant messages with nothing to show. */
+const hasContent = (m: UIMessage) => m.parts.some((p) => (p.type === "text" && p.text.trim()) || draft(p));
 
 export function App() {
   const [name] = useState(conversationId);
-  const agent = useAgent<ChatState>({ agent: "ChatAgent", name });
+  const agent = useAgent<ChatAgent, ChatState>({ agent: "ChatAgent", name });
   const { messages, sendMessage, status, error } = useAgentChat({ agent });
   const [input, setInput] = useState("");
+  // The id of a Handoff opened from the "Ask Nathan directly" link, if any.
+  const [directHandoff, setDirectHandoff] = useState<string>();
   const endRef = useRef<HTMLDivElement>(null);
   // Unknown until the Conversation's state arrives; the server only wants a token until the Conversation passes.
   const needsCheck = agent.state !== undefined && !agent.state.verified;
   const turnstile = useTurnstile(needsCheck);
   const busy = status === "submitted" || status === "streaming";
   const ready = !busy && agent.state !== undefined && (!needsCheck || turnstile.token !== undefined);
+  const sentHandoffs = agent.state?.sentHandoffs ?? [];
+
+  const handoffCard = (id: string, question: string) => (
+    <HandoffCard
+      key={id}
+      id={id}
+      question={question}
+      sent={sentHandoffs.includes(id)}
+      needsToken={needsCheck}
+      token={turnstile.token}
+      onTokenUsed={turnstile.reset}
+      send={(request) => agent.call("sendHandoff", [request])}
+    />
+  );
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -85,7 +109,7 @@ export function App() {
       )}
 
       <ol className="mt-8 flex flex-col gap-4" aria-live="polite">
-        {messages.filter(hasText).map((m: UIMessage) => (
+        {messages.filter(hasContent).map((m: UIMessage) => (
           <li key={m.id} className={m.role === "user" ? "self-end" : "self-start"}>
             <span className="sr-only">{m.role === "user" ? "You asked:" : "Answer:"}</span>
             <div
@@ -95,21 +119,25 @@ export function App() {
                   : "prose prose-stone max-w-none dark:prose-invert"
               }
             >
-              {m.parts.map((p, i) =>
-                p.type !== "text" ? null : m.role === "user" ? (
+              {m.parts.map((p, i) => {
+                const d = m.role === "assistant" ? draft(p) : undefined;
+                if (d) return handoffCard(d.id, d.question);
+                if (p.type !== "text") return null;
+                return m.role === "user" ? (
                   <p key={i}>{p.text}</p>
                 ) : (
                   <Markdown key={i} disallowedElements={["img"]}>
                     {p.text}
                   </Markdown>
-                ),
-              )}
+                );
+              })}
             </div>
           </li>
         ))}
         {status === "submitted" && <li className="text-stone-500">Thinking…</li>}
         {error && <li className="text-red-700 dark:text-red-400">{error.message}</li>}
       </ol>
+      {directHandoff && <div className="mt-4">{handoffCard(directHandoff, "")}</div>}
       <div ref={endRef} />
 
       <div ref={turnstile.ref} className="mt-auto pt-8" />
@@ -144,7 +172,15 @@ export function App() {
         <a className="underline" href="https://github.com/narthur/natbot/blob/main/profile.md">
           public profile
         </a>
-        . Nathan may read these conversations to improve the assistant.
+        . Nathan may read these conversations to improve the assistant.{" "}
+        <button
+          type="button"
+          onClick={() => setDirectHandoff(crypto.randomUUID())}
+          disabled={agent.state === undefined}
+          className="underline"
+        >
+          Ask Nathan directly
+        </button>
       </p>
     </main>
   );
