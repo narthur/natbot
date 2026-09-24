@@ -155,3 +155,11 @@ As recommended
 
 Is the setup you've recommended compatible with ~/code/rss-to-email-worker, already deployed?
 
+## 2026-09-24 13:53:33
+
+Start building v1. Let's get it to where there's something to see on the subdomain, even if it doesn't do anything. Create the pr and drive to mergable
+
+## 2026-09-24 13:54:47
+
+Also we'll need a ci job that deploys to cloudflare on merge to main. See my other repos for how we're doing that.
+

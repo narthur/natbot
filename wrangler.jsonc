@@ -1,0 +1,7 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "natbot",
+  "compatibility_date": "2026-09-15",
+  "assets": { "not_found_handling": "single-page-application" },
+  "routes": [{ "pattern": "ask.nathanarthur.com", "custom_domain": true }]
+}
