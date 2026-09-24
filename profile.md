@@ -4,7 +4,7 @@ This is everything the bot knows about Nathan Arthur. If something isn't here, t
 
 ## Summary
 
-Nathan Arthur is a full-stack web engineer with ten years of professional experience, counted from 2016. He has worked in TypeScript and Node.js since 2019, in React since 2020, and in full-stack TypeScript since 2020. He founded TaskRatchet in 2019 and still runs it, with Stripe billing in production. He was previously Technology Director at AudioVerse. He lives in Bowling Green, Kentucky, USA.
+Nathan Arthur is a full-stack web engineer who has worked professionally since 2016. He has worked in TypeScript and Node.js since 2019, in React since 2020, and in full-stack TypeScript since 2020. He founded TaskRatchet in 2019 and still runs it, with Stripe billing in production. He was previously Technology Director at AudioVerse. He lives in Bowling Green, Kentucky, USA.
 
 - Email: <nathan@nathanarthur.com>
 - Website: nathanarthur.com
@@ -33,7 +33,7 @@ TaskRatchet (taskratchet.com) is a productivity app that puts a user's money on 
 
 **Public API.** He built TaskRatchet's public API, first in Python and then ported to TypeScript, documented from OpenAPI schemas at docs.taskratchet.com, so users can integrate against their own data.
 
-**Agent access (September 2026).** Nathan designed and shipped, using Claude Code for implementation, an OAuth 2.1 authorization server (PKCE, dynamic client registration, four fine-grained scopes, rotating refresh tokens, per-grant revocation) and a remote MCP server at api.taskratchet.com/mcp. Money-affecting actions require a server-side preview-then-confirm step with a single-use signed token, because host approval prompts aren't guaranteed by the protocol. He also published an Agent Skill for TaskRatchet and made the docs agent-readable (llms.txt, Markdown versions of each page). Adoption so far is essentially zero; the work is shipped, not yet used.
+**Agent access (September 2026).** Nathan designed and shipped, using Claude Code for implementation, an OAuth 2.1 authorization server (PKCE, dynamic client registration, four fine-grained scopes, rotating refresh tokens, per-grant revocation) and a remote MCP server at api.taskratchet.com/mcp. Money-affecting actions require a server-side preview-then-confirm step with a single-use signed token, because host approval prompts aren't guaranteed by the protocol. He also published an Agent Skill for TaskRatchet and made the docs agent-readable (llms.txt, Markdown versions of each page). As of September 2026, adoption is essentially zero; the work is shipped, not yet used.
 
 **npm package.** He published `@taskratchet/sdk`, a TypeScript client, through seven major versions between August 2024 and September 2025, then retired it and moved the client into the web app, having decided the package boundary cost more than it gave.
 
@@ -88,7 +88,7 @@ B.B.A. in Business Administration, Ouachita Hills College, 2012 to 2016, includi
 
 ## Skills
 
-- **Languages:** TypeScript and JavaScript (daily); Python (has built with it, including TaskRatchet's first API, but doesn't currently work in it); PHP (WordPress themes and plugins, mostly during college; rusty); Ruby (a learner, from the past couple of years in client Rails codebases); SQL.
+- **Languages:** TypeScript and JavaScript (daily); Python (has built with it, including TaskRatchet's first API, but doesn't currently work in it); PHP (WordPress themes and plugins, mostly during college; rusty); Ruby (a learner, in client Rails codebases since 2025); SQL.
 - **Frontend:** React, Next.js, Astro, Svelte and SvelteKit, Tailwind, React Query, component libraries, accessibility.
 - **Backend:** Node.js, Hono, NestJS, GraphQL, REST APIs, OpenAPI, OAuth 2.1 and OIDC, Stripe, MCP servers.
 - **Data:** database design and normalization (he owns TaskRatchet's production schema), Cloudflare D1, SQLite, PostgreSQL. He leans on tools and documentation for query optimization.
@@ -107,7 +107,7 @@ B.B.A. in Business Administration, Ouachita Hills College, 2012 to 2016, includi
 - He hasn't run a user-facing A/B test. His projects haven't had the traffic for statistical power.
 - He isn't the maintainer of any open-source project with significant outside usage or contributions.
 - On AWS, he planned the AudioVerse transcoding pipeline but didn't implement it.
-- He is not conversational in Swedish yet. He has studied it daily on Duolingo since September 2025.
+- As of September 2026, he is not conversational in Swedish. He has studied it daily on Duolingo since September 2025.
 
 ## Views and motivations
 
