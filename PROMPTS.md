@@ -163,3 +163,7 @@ Start building v1. Let's get it to where there's something to see on the subdoma
 
 Also we'll need a ci job that deploys to cloudflare on merge to main. See my other repos for how we're doing that.
 
+## 2026-09-24 14:02:43
+
+Should we also add a dependabot config to the repo in this pr, like we have in other repos?
+
