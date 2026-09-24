@@ -263,3 +263,34 @@ Sure, but a github issue should be created so creating the tests for it isn't dr
 
 No, include it in 11
 
+## 2026-09-24 16:23:06
+
+Merged. What's next?
+
+## 2026-09-24 16:23:52
+
+Yes, proceed, drive to mergable
+
+## 2026-09-24 16:53:24
+
+When I create with Spin it lets me select a tld but not a subdomain. I already have a turnstile wdiget set up with spin for nathanarthur.com for the newsletter subscribe form
+
+## 2026-09-24 16:54:51
+
+site key: 0x4AAAAAAFCsuz3x4Z505mBi
+
+## 2026-09-24 16:56:04
+
+<pasted_content id="1422">
+The Turnstile widget is already created. Finish integrating it into this project.
+
+Site key: 0x4AAAAAAFCsuz3x4Z505mBi
+
+Fetch and follow the existing-widget flow:
+https://developers.cloudflare.com/turnstile/spin/prompt.md
+</pasted_content id="1422">
+
+## 2026-09-24 16:58:15
+
+We should remember to include the turnstile siteverify call.
+

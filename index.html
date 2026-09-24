@@ -8,6 +8,8 @@
   </head>
   <body class="bg-white dark:bg-stone-950">
     <div id="root"></div>
+    <!-- Loads before main.tsx (both deferred, run in order), so window.turnstile exists when the app starts. -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

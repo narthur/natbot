@@ -18,6 +18,12 @@ export type Turn = { question: string; answer: string };
 export type AnswerDeps = {
   /** False when this Conversation is asking too fast. */
   withinRateLimit: () => Promise<boolean>;
+  /** Whether this Conversation's Visitor has passed Turnstile, checked on their first question (ADR 0005). */
+  human: {
+    verified: () => boolean;
+    verify: (token: string | undefined) => Promise<boolean>;
+    markVerified: () => void;
+  };
   /** Claims one of today's model calls; false when none are left. */
   spendBudget: () => Promise<boolean>;
   /** The Conversation's recorded turns, oldest first. */
@@ -25,16 +31,30 @@ export type AnswerDeps = {
   model: LanguageModel;
 };
 
+/** What the chat client sent alongside the messages. */
+export type AnswerRequest = { turnstileToken?: string; abortSignal?: AbortSignal };
+
 /**
- * Answers the visitor's latest message: checks the rate limit and daily budget, then streams the
+ * Answers the visitor's latest message: checks the rate limit, Turnstile, and daily budget, then streams the
  * model's answer and records it as a turn. Always returns a UI message stream the chat client can show.
  */
-export async function answer(messages: UIMessage[], deps: AnswerDeps, abortSignal?: AbortSignal): Promise<Response> {
+export async function answer(
+  messages: UIMessage[],
+  deps: AnswerDeps,
+  { turnstileToken, abortSignal }: AnswerRequest = {},
+): Promise<Response> {
   const question = latestQuestion(messages);
   if (!question) return reply("Please type a question about Nathan's career.");
 
   if (!(await deps.withinRateLimit())) {
     return reply("That's a lot of questions at once. Please wait a minute and try again.");
+  }
+
+  if (!deps.human.verified()) {
+    if (!(await deps.human.verify(turnstileToken))) {
+      return reply("Please complete the check next to the question box, then ask again.");
+    }
+    deps.human.markVerified();
   }
 
   if (!(await deps.spendBudget())) {
