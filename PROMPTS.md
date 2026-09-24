@@ -167,3 +167,11 @@ Also we'll need a ci job that deploys to cloudflare on merge to main. See my oth
 
 Should we also add a dependabot config to the repo in this pr, like we have in other repos?
 
+## 2026-09-24 14:09:43
+
+Token added and deploy succeeded. Proceed to the next pr, drive to mergable
+
+## 2026-09-24 14:25:57
+
+"with ten years of professional experience" - I think we should avoid committing things like that which will automatically go stale. Use the dates on their own instead of saying how long ago they were.
+
