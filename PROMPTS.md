@@ -143,3 +143,11 @@ Yes, proceed
 
 Yes, create the pr and drive to mergable
 
+## 2026-09-24 13:47:24
+
+Let's settle on a stack. I'm thinking pnpm monorepo, full-stack typescript, one package for backend and one for frontend, vitest for testing. How will conversations be stored? d1? kv? We just set up mailgun sender domain for mail.nathanarthur.com. Do we use that or will we have to set up another sender domain on mailgun? What web frameworks / frontend libraries will make this kind of real-time chat ui simplest to build?
+
+## 2026-09-24 13:51:02
+
+As recommended
+
