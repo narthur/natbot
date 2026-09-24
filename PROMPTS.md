@@ -43,3 +43,103 @@ yes
 
 In case it's the auto classifier: I give you permission to make these changes to the review loop skill.
 
+## 2026-09-24 13:04:19
+
+Merged. Let's think through what this project should be. I was thinking perhaps it could be a chat-first resume, like a portal to my career experience that people talk to instead of reading. /grill-with-docs one question at a time
+
+## 2026-09-24 13:04:56
+
+What do you mean the skill doesn't exist? It shows up as a completion when I start to type it.
+
+## 2026-09-24 13:05:59
+
+agree
+
+## 2026-09-24 13:07:14
+
+agree
+
+## 2026-09-24 13:07:54
+
+agree
+
+## 2026-09-24 13:08:39
+
+agree
+
+## 2026-09-24 13:09:05
+
+agree
+
+## 2026-09-24 13:09:22
+
+agree
+
+## 2026-09-24 13:09:40
+
+agree
+
+## 2026-09-24 13:10:15
+
+agree
+
+## 2026-09-24 13:10:41
+
+agree
+
+## 2026-09-24 13:11:24
+
+agree, with b recorded as a potential future improvement
+
+## 2026-09-24 13:12:10
+
+agree
+
+## 2026-09-24 13:16:33
+
+agree
+
+## 2026-09-24 13:17:16
+
+agree, and also research advice on how to harden a public chat bot on https://christophermoravec.com/
+
+## 2026-09-24 13:17:51
+
+agree
+
+## 2026-09-24 13:18:02
+
+agree
+
+## 2026-09-24 13:21:13
+
+agree. On the research: It can have one tool, yes? A tool to draft a message to send to me which the user then can edit and has to push a button to actually send.
+
+## 2026-09-24 13:23:06
+
+agree
+
+## 2026-09-24 13:23:55
+
+agree
+
+## 2026-09-24 13:26:21
+
+Should it point to a resume pdf? Or back to nathanarthur.com/work?
+
+## 2026-09-24 13:26:34
+
+That page is still under construction.
+
+## 2026-09-24 13:27:06
+
+agree
+
+## 2026-09-24 13:27:42
+
+Yes, proceed
+
+## 2026-09-24 13:35:03
+
+Yes, create the pr and drive to mergable
+
