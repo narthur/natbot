@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { verifyTurnstile } from "./turnstile";
+import { SITEVERIFY, verifyTurnstile } from "./turnstile";
 
 const siteverify = (body: unknown) => vi.fn(async (_url: string, _init: RequestInit) => Response.json(body));
 
@@ -7,6 +7,8 @@ test("a token Cloudflare accepts passes", async () => {
   const fetch = siteverify({ success: true });
   vi.stubGlobal("fetch", fetch);
   expect(await verifyTurnstile("secret", "token")).toBe(true);
+  expect(fetch.mock.calls[0]?.[0]).toBe(SITEVERIFY);
+  expect(fetch.mock.calls[0]?.[1].method).toBe("POST");
   expect(String(fetch.mock.calls[0]?.[1].body)).toBe("secret=secret&response=token");
 });
 
@@ -30,4 +32,11 @@ test("a rejected, missing, or unverifiable token fails", async () => {
   );
   expect(await verifyTurnstile("secret", "token")).toBe(false);
   expect(console.error).toHaveBeenCalled();
+});
+
+test("a bad Worker secret is logged as an error, not a visitor failing the check", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.stubGlobal("fetch", siteverify({ success: false, "error-codes": ["invalid-input-secret"] }));
+  expect(await verifyTurnstile("wrong", "token")).toBe(false);
+  expect(console.error).toHaveBeenCalledWith("turnstile secret is missing or invalid", ["invalid-input-secret"]);
 });

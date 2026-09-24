@@ -108,6 +108,12 @@ export function App() {
       <div ref={endRef} />
 
       <div ref={turnstile.ref} className="mt-auto pt-8" />
+      {turnstile.failed && (
+        <p className="text-sm text-red-700 dark:text-red-400">
+          The check that keeps bots out couldn't load, so asking is turned off. Try reloading the page, or allow
+          challenges.cloudflare.com if a content blocker is on.
+        </p>
+      )}
       <form className="flex gap-2 pt-2" onSubmit={onSubmit}>
         <label htmlFor="question" className="sr-only">
           Your question

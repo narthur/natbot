@@ -14,12 +14,15 @@ const FORGET_AFTER_SECONDS = 30 * 24 * 60 * 60;
 export class ChatAgent extends AIChatAgent<Env> {
   maxPersistedMessages = 100;
 
-  onStart() {
+  async onStart() {
     this.sql`CREATE TABLE IF NOT EXISTS turns (question TEXT NOT NULL, answer TEXT NOT NULL)`;
+    // Conversations from before forgetting existed have no timer; give them one without extending any that do.
+    if (!(await this.forgetSchedules()).length) await this.schedule(FORGET_AFTER_SECONDS, "forget");
   }
 
   async onChatMessage(_onFinish: unknown, options?: OnChatMessageOptions) {
-    await this.forgetLater();
+    // A recovery replay after an interruption isn't a new question.
+    if (!options?.continuation) await this.forgetLater();
     const token = options?.body?.turnstileToken;
     return answer(
       this.messages,
@@ -45,14 +48,26 @@ export class ChatAgent extends AIChatAgent<Env> {
 
   /** Moves this Conversation's deletion to FORGET_AFTER_SECONDS from now. */
   private async forgetLater() {
-    for (const s of await this.listSchedules()) {
-      if (s.callback === "forget") await this.cancelSchedule(s.id);
+    try {
+      for (const s of await this.forgetSchedules()) await this.cancelSchedule(s.id);
+      await this.schedule(FORGET_AFTER_SECONDS, "forget");
+    } catch (error) {
+      // Answering matters more than moving the deletion date; the old timer, if any, still stands.
+      console.error("couldn't reschedule forgetting a Conversation", error);
     }
-    await this.schedule(FORGET_AFTER_SECONDS, "forget");
+  }
+
+  private async forgetSchedules() {
+    return (await this.listSchedules()).filter((s) => s.callback === "forget");
   }
 
   /** Deletes everything in this Conversation: turns, persisted messages, the Turnstile pass, and its schedules. */
   async forget() {
-    await this.destroy();
+    try {
+      await this.destroy();
+    } catch (error) {
+      console.error("forgetting a Conversation failed", error);
+      throw error;
+    }
   }
 }
