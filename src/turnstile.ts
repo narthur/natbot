@@ -32,6 +32,7 @@ export function useTurnstile() {
     const id = turnstile.render(ref.current, {
       sitekey: SITE_KEY,
       appearance: "interaction-only",
+      action: "ask", // The Worker rejects tokens with any other action (src/worker/turnstile.ts).
       callback: (t: string) => {
         setToken(t);
         setFailed(false);

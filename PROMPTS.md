@@ -279,3 +279,18 @@ When I create with Spin it lets me select a tld but not a subdomain. I already h
 
 site key: 0x4AAAAAAFCsuz3x4Z505mBi
 
+## 2026-09-24 16:56:04
+
+<pasted_content id="1422">
+The Turnstile widget is already created. Finish integrating it into this project.
+
+Site key: 0x4AAAAAAFCsuz3x4Z505mBi
+
+Fetch and follow the existing-widget flow:
+https://developers.cloudflare.com/turnstile/spin/prompt.md
+</pasted_content id="1422">
+
+## 2026-09-24 16:58:15
+
+We should remember to include the turnstile siteverify call.
+
