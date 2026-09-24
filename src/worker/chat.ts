@@ -4,7 +4,7 @@ import { answer, type Turn } from "./answer";
 
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 // Counts attempts, not successful answers: a failed call can still cost tokens.
-// About $2/day for short conversations, up to ~$6/day if every call carries 10 turns of history.
+// About $2/day for short conversations, up to ~$6/day if every call carries a full window of history (HISTORY_TURNS in answer.ts).
 const DAILY_ANSWER_LIMIT = 1000;
 
 /** Adapts one Conversation's Durable Object to the answer module. */

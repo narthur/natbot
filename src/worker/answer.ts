@@ -9,8 +9,8 @@ import {
 import { SYSTEM_PROMPT } from "./prompt";
 
 export const MAX_QUESTION_CHARS = 2000;
-// Keeps the prompt well inside Llama 3.3's 24k-token context alongside the Profile (ADR 0002).
-const HISTORY_TURNS = 10;
+// Keeps the prompt well inside the model's context alongside the Profile (ADR 0002): 24k tokens for the Llama 3.3 chosen in chat.ts.
+export const HISTORY_TURNS = 10;
 
 /** A completed exchange this server produced. The only history the model ever sees. */
 export type Turn = { question: string; answer: string };

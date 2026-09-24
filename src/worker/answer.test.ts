@@ -1,7 +1,7 @@
 import { simulateReadableStream, type UIMessage } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { expect, test, vi } from "vitest";
-import { answer, type AnswerDeps, MAX_QUESTION_CHARS, type Turn } from "./answer";
+import { answer, type AnswerDeps, HISTORY_TURNS, MAX_QUESTION_CHARS, type Turn } from "./answer";
 
 const msg = (role: UIMessage["role"], text: string): UIMessage => ({
   id: crypto.randomUUID(),
@@ -88,6 +88,7 @@ test("an exhausted budget stops the model call", async () => {
   const { deps, model } = setup({ spendBudget: vi.fn(async () => false) });
   expect(await (await answer([msg("user", "q")], deps)).text()).toContain("check back tomorrow");
   expect(model.doStreamCalls).toHaveLength(0);
+  expect(console.warn).toHaveBeenCalledWith("daily answer budget exhausted");
 });
 
 test("an empty answer is not recorded", async () => {
@@ -106,4 +107,20 @@ test("a failed model call shows the visitor an apology and records nothing", asy
   const { deps, turns } = setup({ model });
   expect(await (await answer([msg("user", "q")], deps)).text()).toContain("Sorry, something went wrong");
   expect(turns).toEqual([]);
+  expect(console.error).toHaveBeenCalledWith("chat stream error", expect.any(Error));
+});
+
+test("the model sees at most HISTORY_TURNS recorded turns", async () => {
+  const recent = vi.fn((_limit: number): Turn[] => []);
+  const { deps } = setup({ history: { recent, record: () => {} } });
+  await (await answer([msg("user", "q")], deps)).text();
+  expect(recent).toHaveBeenCalledWith(HISTORY_TURNS);
+  expect(HISTORY_TURNS).toBe(10);
+});
+
+test("a cancelled chat request cancels the model call", async () => {
+  const { deps, model } = setup();
+  const controller = new AbortController();
+  await (await answer([msg("user", "q")], deps, controller.signal)).text();
+  expect(model.doStreamCalls[0].abortSignal).toBe(controller.signal);
 });
