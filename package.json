@@ -10,12 +10,21 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ai-sdk/react": "^4.0.117",
+    "@cloudflare/ai-chat": "^0.12.0",
+    "agents": "^0.24.0",
+    "ai": "^7.0.114",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
+    "workers-ai-provider": "4.0.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.59.0",
+    "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
@@ -29,6 +38,10 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "workerd"
-    ]
-  }
+    ],
+    "patchedDependencies": {
+      "workers-ai-provider@4.0.0": "patches/workers-ai-provider@4.0.0.patch"
+    }
+  },
+  "packageManager": "pnpm@10.6.1"
 }

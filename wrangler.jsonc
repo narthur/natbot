@@ -1,7 +1,26 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "natbot",
+  "main": "src/worker/index.ts",
   "compatibility_date": "2026-09-15",
-  "assets": { "not_found_handling": "single-page-application" },
-  "routes": [{ "pattern": "ask.nathanarthur.com", "custom_domain": true }]
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "ask.nathanarthur.com", "custom_domain": true }],
+  "observability": { "enabled": true },
+  "ai": { "binding": "AI", "remote": true },
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/agents/*"]
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ChatAgent", "class_name": "ChatAgent" },
+      { "name": "Budget", "class_name": "Budget" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatAgent", "Budget"] }],
+  // Limits are per Cloudflare location, so they bound bursts rather than exact totals; Budget is the hard daily cap.
+  "ratelimits": [
+    { "name": "CONNECT_LIMITER", "namespace_id": "4201", "simple": { "limit": 20, "period": 60 } },
+    { "name": "MESSAGE_LIMITER", "namespace_id": "4202", "simple": { "limit": 6, "period": 60 } }
+  ]
 }

@@ -175,3 +175,11 @@ Token added and deploy succeeded. Proceed to the next pr, drive to mergable
 
 "with ten years of professional experience" - I think we should avoid committing things like that which will automatically go stale. Use the dates on their own instead of saying how long ago they were.
 
+## 2026-09-24 14:30:19
+
+Merged. What's next?
+
+## 2026-09-24 14:31:52
+
+Create two follow-up issues--one for creating an adversarial eval, one for adding the ability for users to report responses. And then proceed as recommended, drive to mergable.
+
