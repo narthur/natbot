@@ -1,10 +1,8 @@
 import { routeAgentRequest } from "agents";
+import { CONVERSATION_PATH } from "./conversation-path";
 
 export { Budget } from "./budget";
 export { ChatAgent } from "./chat";
-
-// Conversation names are browser-generated UUIDs, so one visitor can't guess another's conversation.
-const CONVERSATION_PATH = /^\/agents\/chat-agent\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/|$)/;
 
 export default {
   async fetch(request, env) {

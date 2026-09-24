@@ -88,7 +88,9 @@ export function App() {
                 p.type !== "text" ? null : m.role === "user" ? (
                   <p key={i}>{p.text}</p>
                 ) : (
-                  <Markdown key={i}>{p.text}</Markdown>
+                  <Markdown key={i} disallowedElements={["img"]}>
+                    {p.text}
+                  </Markdown>
                 ),
               )}
             </div>
