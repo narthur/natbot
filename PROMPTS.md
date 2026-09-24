@@ -143,3 +143,27 @@ Yes, proceed
 
 Yes, create the pr and drive to mergable
 
+## 2026-09-24 13:47:24
+
+Let's settle on a stack. I'm thinking pnpm monorepo, full-stack typescript, one package for backend and one for frontend, vitest for testing. How will conversations be stored? d1? kv? We just set up mailgun sender domain for mail.nathanarthur.com. Do we use that or will we have to set up another sender domain on mailgun? What web frameworks / frontend libraries will make this kind of real-time chat ui simplest to build?
+
+## 2026-09-24 13:51:02
+
+As recommended
+
+## 2026-09-24 13:51:53
+
+Is the setup you've recommended compatible with ~/code/rss-to-email-worker, already deployed?
+
+## 2026-09-24 13:53:33
+
+Start building v1. Let's get it to where there's something to see on the subdomain, even if it doesn't do anything. Create the pr and drive to mergable
+
+## 2026-09-24 13:54:47
+
+Also we'll need a ci job that deploys to cloudflare on merge to main. See my other repos for how we're doing that.
+
+## 2026-09-24 14:02:43
+
+Should we also add a dependabot config to the repo in this pr, like we have in other repos?
+
