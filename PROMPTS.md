@@ -187,3 +187,47 @@ Create two follow-up issues--one for creating an adversarial eval, one for addin
 
 Can the ai gateway be defined in the wrangler file and created that way?
 
+## 2026-09-24 14:58:39
+
+What does hitchhikers-ai use? Is that different from ai gateway?
+
+## 2026-09-24 14:59:45
+
+I'm confused because I don't recall manually creating an ai gateway for hitchhikers-ai. Can you investigate how that was created?
+
+## 2026-09-24 15:01:06
+
+What's the value that ai gateway provides above how hitchhikers-ai is currently doing it?
+
+## 2026-09-24 15:04:38
+
+Ok. I revoked the openai token and also created the natbot api gateway
+
+## 2026-09-24 15:06:59
+
+Remove the openai api key from hitchhikers, and draft the upstream issue
+
+## 2026-09-24 15:08:13
+
+Ok. Save that draft in obsidian.
+
+## 2026-09-24 15:09:55
+
+Create a follow-up issue for using a moderation model if that's not already in the plan
+
+## 2026-09-24 15:12:06
+
+I'm not sure on the evals reasoning. Definitely good to compare with evals, but swiss cheese approach suggests having multiple layers of defense even if they largely overlap
+
+## 2026-09-24 15:13:57
+
+Merged and it's working. File a follow-up issue for making the conversation scroll but not scrilling the text input. So even if the user scrolls up the input is always in the same place.
+
+## 2026-09-24 15:15:09
+
+/improve-codebase-architecture
+
+## 2026-09-24 15:49:24
+
+PR 8 is merged. Create a new pr, implement 1, drive to mergable, and then pause so we can explore the other two together
+
