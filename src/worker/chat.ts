@@ -16,8 +16,15 @@ export class ChatAgent extends AIChatAgent<Env> {
 
   async onStart() {
     this.sql`CREATE TABLE IF NOT EXISTS turns (question TEXT NOT NULL, answer TEXT NOT NULL)`;
-    // Conversations from before forgetting existed have no timer; give them one without extending any that do.
-    if (!(await this.forgetSchedules()).length) await this.schedule(FORGET_AFTER_SECONDS, "forget");
+    // Every Conversation gets a timer, including ones created before forgetting existed and ones that never
+    // ask a question. Never extend an existing timer here: waking up isn't a new question.
+    try {
+      if (!(await this.forgetSchedules()).length) {
+        await this.schedule(FORGET_AFTER_SECONDS, "forget", undefined, { idempotent: true });
+      }
+    } catch (error) {
+      console.error("couldn't set a Conversation's forget timer on start", error);
+    }
   }
 
   async onChatMessage(_onFinish: unknown, options?: OnChatMessageOptions) {

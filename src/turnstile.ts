@@ -37,7 +37,10 @@ export function useTurnstile() {
         setFailed(false);
       },
       "expired-callback": () => setToken(undefined),
-      "error-callback": () => setFailed(true),
+      "error-callback": () => {
+        setFailed(true);
+        setToken(undefined);
+      },
     });
     widget.current = id;
     return () => turnstile.remove(id);
