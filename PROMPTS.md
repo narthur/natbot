@@ -306,3 +306,55 @@ Merged and it's working. I'm behind a vpn and I had to check the turnstile box, 
 
 yes
 
+## 2026-09-24 17:27:38
+
+Merged, deployed, seems to be working. what's next?
+
+## 2026-09-24 17:29:42
+
+Sure /grill-with-docs
+
+## 2026-09-24 17:31:24
+
+sure, b
+
+## 2026-09-24 17:33:33
+
+I think it has to have an email field. I think it just works like a contact form. Expecting someone to come back to the page and get an answer is a little much, yeah? Unless we're going the support chat paradigm? In which case email should still be accepted so the system can ping them when I respond.
+
+## 2026-09-24 17:34:29
+
+What do you mean by proposals?
+
+## 2026-09-24 17:34:44
+
+Got it. Ok, sure. As recommended.
+
+## 2026-09-24 17:35:56
+
+agree
+
+## 2026-09-24 17:36:41
+
+Agree, and maybe also spam or moderation check pre-send?
+
+## 2026-09-24 17:37:58
+
+as recommended
+
+## 2026-09-24 17:39:20
+
+I'm wondering if this should actually use its own sender domain to product the domain used by my newsletter.
+
+## 2026-09-24 17:40:22
+
+Sure, that's fine. And accept q7 as recommended
+
+## 2026-09-24 17:41:37
+
+agree
+
+## 2026-09-24 17:43:20
+
+proceed
+
