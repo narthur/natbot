@@ -34,6 +34,7 @@ function setup(overrides: Partial<AnswerDeps> = {}, turns: Turn[] = []) {
   const model = modelSaying("He built TaskRatchet.");
   const deps: AnswerDeps = {
     withinRateLimit: vi.fn(async () => true),
+    human: { verified: () => true, verify: vi.fn(async () => true), markVerified: vi.fn() },
     spendBudget: vi.fn(async () => true),
     history: { recent: (limit) => turns.slice(-limit), record: (t) => turns.push(t) },
     model,
@@ -121,6 +122,48 @@ test("the model sees at most HISTORY_TURNS recorded turns", async () => {
 test("the chat request's abort signal is passed to the model call", async () => {
   const { deps, model } = setup();
   const controller = new AbortController();
-  await (await answer([msg("user", "q")], deps, controller.signal)).text();
+  await (await answer([msg("user", "q")], deps, { abortSignal: controller.signal })).text();
   expect(model.doStreamCalls[0].abortSignal).toBe(controller.signal);
+});
+
+/** An unverified Conversation whose Turnstile check returns `passes`. */
+function unverified(passes: boolean) {
+  let verified = false;
+  const human = {
+    verified: () => verified,
+    verify: vi.fn(async (_token: string | undefined) => passes),
+    markVerified: vi.fn(() => {
+      verified = true;
+    }),
+  };
+  return { human, ...setup({ human }) };
+}
+
+test("a Conversation's first question needs a valid Turnstile token", async () => {
+  const { deps, human, turns } = unverified(true);
+  await (await answer([msg("user", "q")], deps, { turnstileToken: "tok" })).text();
+  expect(human.verify).toHaveBeenCalledWith("tok");
+  expect(human.markVerified).toHaveBeenCalled();
+  expect(turns).toHaveLength(1);
+
+  await (await answer([msg("user", "q2")], deps)).text();
+  expect(human.verify).toHaveBeenCalledTimes(1);
+  expect(turns).toHaveLength(2);
+});
+
+test("a failed Turnstile check spends no budget and asks the visitor to retry", async () => {
+  const { deps, human, model } = unverified(false);
+  expect(await (await answer([msg("user", "q")], deps, { turnstileToken: "bad" })).text()).toContain(
+    "complete the check",
+  );
+  expect(human.markVerified).not.toHaveBeenCalled();
+  expect(deps.spendBudget).not.toHaveBeenCalled();
+  expect(model.doStreamCalls).toHaveLength(0);
+});
+
+test("a rate-limited Conversation doesn't reach Turnstile", async () => {
+  const { deps, human } = unverified(true);
+  deps.withinRateLimit = async () => false;
+  await (await answer([msg("user", "q")], deps, { turnstileToken: "tok" })).text();
+  expect(human.verify).not.toHaveBeenCalled();
 });

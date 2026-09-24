@@ -3,6 +3,7 @@ import { useAgent } from "agents/react";
 import type { UIMessage } from "ai";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { useTurnstile } from "./turnstile";
 
 const starterQuestions = [
   "What has Nathan built?",
@@ -32,7 +33,10 @@ export function App() {
   const { messages, sendMessage, status, error } = useAgentChat({ agent });
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const turnstile = useTurnstile();
   const busy = status === "submitted" || status === "streaming";
+  // The server only needs a token on a Conversation's first question, but the client can't tell which that is.
+  const ready = !busy && turnstile.token !== undefined;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -40,8 +44,9 @@ export function App() {
 
   function ask(text: string) {
     const question = text.trim();
-    if (!question || busy) return;
-    sendMessage({ role: "user", parts: [{ type: "text", text: question }] });
+    if (!question || !ready) return;
+    sendMessage({ role: "user", parts: [{ type: "text", text: question }] }, { body: { turnstileToken: turnstile.token } });
+    turnstile.reset();
     setInput("");
   }
 
@@ -64,7 +69,8 @@ export function App() {
               <button
                 type="button"
                 onClick={() => ask(q)}
-                className="rounded-full border border-stone-300 px-3 py-1 text-sm hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-900"
+                disabled={!ready}
+                className="rounded-full border border-stone-300 px-3 py-1 text-sm hover:bg-stone-100 disabled:opacity-40 dark:border-stone-700 dark:hover:bg-stone-900"
               >
                 {q}
               </button>
@@ -101,7 +107,8 @@ export function App() {
       </ol>
       <div ref={endRef} />
 
-      <form className="mt-auto flex gap-2 pt-8" onSubmit={onSubmit}>
+      <div ref={turnstile.ref} className="mt-auto pt-8" />
+      <form className="flex gap-2 pt-2" onSubmit={onSubmit}>
         <label htmlFor="question" className="sr-only">
           Your question
         </label>
@@ -115,7 +122,7 @@ export function App() {
         />
         <button
           type="submit"
-          disabled={busy || !input.trim()}
+          disabled={!ready || !input.trim()}
           className="rounded-lg bg-stone-900 px-4 py-3 text-white disabled:opacity-40 dark:bg-stone-100 dark:text-stone-900"
         >
           Ask
