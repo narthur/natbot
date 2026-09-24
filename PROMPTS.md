@@ -263,3 +263,11 @@ Sure, but a github issue should be created so creating the tests for it isn't dr
 
 No, include it in 11
 
+## 2026-09-24 16:23:06
+
+Merged. What's next?
+
+## 2026-09-24 16:23:52
+
+Yes, proceed, drive to mergable
+
