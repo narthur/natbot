@@ -18,8 +18,9 @@ declare global {
  * A Turnstile widget that only shows itself when Cloudflare needs the visitor to interact.
  * `token` is undefined until the check passes; call `reset` after spending a token (they're single-use).
  * `failed` is true when the script was blocked or the widget errored, so the page can say why asking is off.
+ * Renders nothing while `enabled` is false: a Conversation that has passed never needs another token.
  */
-export function useTurnstile() {
+export function useTurnstile(enabled: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   const widget = useRef<string>(undefined);
   const [token, setToken] = useState<string>();
@@ -28,7 +29,7 @@ export function useTurnstile() {
 
   useEffect(() => {
     const turnstile = window.turnstile;
-    if (!turnstile || !ref.current) return;
+    if (!enabled || !turnstile || !ref.current) return;
     const id = turnstile.render(ref.current, {
       sitekey: SITE_KEY,
       appearance: "interaction-only",
@@ -44,8 +45,11 @@ export function useTurnstile() {
       },
     });
     widget.current = id;
-    return () => turnstile.remove(id);
-  }, []);
+    return () => {
+      turnstile.remove(id);
+      widget.current = undefined;
+    };
+  }, [enabled]);
 
   function reset() {
     setToken(undefined);

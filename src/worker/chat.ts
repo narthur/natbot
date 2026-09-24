@@ -10,12 +10,18 @@ const DAILY_ANSWER_LIMIT = 1000;
 // A Conversation is forgotten 30 days after its latest question (CONTEXT.md).
 const FORGET_AFTER_SECONDS = 30 * 24 * 60 * 60;
 
+/** Synced to the page. Only the server writes it; the page uses it to stop asking for Turnstile. */
+export type ChatState = { verified: boolean };
+
 /** Adapts one Conversation's Durable Object to the answer module. */
-export class ChatAgent extends AIChatAgent<Env> {
+export class ChatAgent extends AIChatAgent<Env, ChatState> {
   maxPersistedMessages = 100;
+  initialState: ChatState = { verified: false };
 
   async onStart() {
     this.sql`CREATE TABLE IF NOT EXISTS turns (question TEXT NOT NULL, answer TEXT NOT NULL)`;
+    // Conversations that passed before the page could see it.
+    if (this.passedTurnstile() && !this.state.verified) this.setState({ verified: true });
     // Every Conversation gets a timer, including ones created before forgetting existed and ones that never
     // ask a question. Never extend an existing timer here: waking up isn't a new question.
     try {
@@ -36,9 +42,12 @@ export class ChatAgent extends AIChatAgent<Env> {
       {
         withinRateLimit: async () => (await this.env.MESSAGE_LIMITER.limit({ key: this.name })).success,
         human: {
-          verified: () => this.ctx.storage.kv.get("human") === true,
+          verified: () => this.passedTurnstile(),
           verify: (token) => verifyTurnstile(this.env.TURNSTILE_SECRET_KEY, token),
-          markVerified: () => this.ctx.storage.kv.put("human", true),
+          markVerified: () => {
+            this.ctx.storage.kv.put("human", true);
+            this.setState({ verified: true });
+          },
         },
         spendBudget: () => this.env.Budget.getByName("daily").spend(DAILY_ANSWER_LIMIT),
         history: {
@@ -51,6 +60,15 @@ export class ChatAgent extends AIChatAgent<Env> {
       },
       { turnstileToken: typeof token === "string" ? token : undefined, abortSignal: options?.abortSignal },
     );
+  }
+
+  // The gate reads this KV flag, never the synced state, so a bug in state syncing can only affect the page.
+  private passedTurnstile() {
+    return this.ctx.storage.kv.get("human") === true;
+  }
+
+  validateStateChange(_next: ChatState, source: unknown) {
+    if (source !== "server") throw new Error("Conversation state is written by the server only");
   }
 
   /** Moves this Conversation's deletion to FORGET_AFTER_SECONDS from now. */

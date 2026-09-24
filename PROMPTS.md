@@ -294,3 +294,15 @@ https://developers.cloudflare.com/turnstile/spin/prompt.md
 
 We should remember to include the turnstile siteverify call.
 
+## 2026-09-24 17:02:43
+
+Is the site key safe to have in PROMPTS.md?
+
+## 2026-09-24 17:07:54
+
+Merged and it's working. I'm behind a vpn and I had to check the turnstile box, and then it let me ask a question. However it looks like it will make me check the box on each question I ask. Is that intentional?
+
+## 2026-09-24 17:08:45
+
+yes
+

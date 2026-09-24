@@ -4,6 +4,7 @@ import type { UIMessage } from "ai";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { useTurnstile } from "./turnstile";
+import type { ChatState } from "./worker/chat";
 
 const starterQuestions = [
   "What has Nathan built?",
@@ -29,14 +30,15 @@ const hasText = (m: UIMessage) => m.parts.some((p) => p.type === "text" && p.tex
 
 export function App() {
   const [name] = useState(conversationId);
-  const agent = useAgent({ agent: "ChatAgent", name });
+  const agent = useAgent<ChatState>({ agent: "ChatAgent", name });
   const { messages, sendMessage, status, error } = useAgentChat({ agent });
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
-  const turnstile = useTurnstile();
+  // Unknown until the Conversation's state arrives; the server only wants a token until the Conversation passes.
+  const needsCheck = agent.state !== undefined && !agent.state.verified;
+  const turnstile = useTurnstile(needsCheck);
   const busy = status === "submitted" || status === "streaming";
-  // The server only needs a token on a Conversation's first question, but the client can't tell which that is.
-  const ready = !busy && turnstile.token !== undefined;
+  const ready = !busy && agent.state !== undefined && (!needsCheck || turnstile.token !== undefined);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,8 +47,11 @@ export function App() {
   function ask(text: string) {
     const question = text.trim();
     if (!question || !ready) return;
-    sendMessage({ role: "user", parts: [{ type: "text", text: question }] }, { body: { turnstileToken: turnstile.token } });
-    turnstile.reset();
+    sendMessage(
+      { role: "user", parts: [{ type: "text", text: question }] },
+      { body: needsCheck ? { turnstileToken: turnstile.token } : {} },
+    );
+    if (needsCheck) turnstile.reset();
     setInput("");
   }
 
@@ -108,7 +113,7 @@ export function App() {
       <div ref={endRef} />
 
       <div ref={turnstile.ref} className="mt-auto pt-8" />
-      {turnstile.failed && (
+      {needsCheck && turnstile.failed && (
         <p className="text-sm text-red-700 dark:text-red-400">
           The check that keeps bots out couldn't load, so asking is turned off. Try reloading the page, or allow
           challenges.cloudflare.com if a content blocker is on.
