@@ -13,7 +13,7 @@ Nathan's private, canonical career data, which includes material that must never
 _Avoid_: career data, source of truth
 
 **Conversation**:
-One Visitor's ongoing exchange with the bot, resumed when they return from the same browser and forgotten after a period of inactivity.
+One Visitor's ongoing exchange with the bot, resumed when they return from the same browser. Forgotten entirely, everything said in it, after 30 days without a new question.
 _Avoid_: session, chat, thread
 
 **Handoff**:
