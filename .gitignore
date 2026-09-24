@@ -2,3 +2,4 @@ node_modules
 dist
 .wrangler
 .static-analysis
+*.tsbuildinfo
