@@ -6,7 +6,7 @@ This is everything the bot knows about Nathan Arthur. If something isn't here, t
 
 Nathan Arthur is a full-stack web engineer with ten years of professional experience, counted from 2016. He has worked in TypeScript and Node.js since 2019, in React since 2020, and in full-stack TypeScript since 2020. He founded TaskRatchet in 2019 and still runs it, with Stripe billing in production. He was previously Technology Director at AudioVerse. He lives in Bowling Green, Kentucky, USA.
 
-- Email: nathan@nathanarthur.com
+- Email: <nathan@nathanarthur.com>
 - Website: nathanarthur.com
 - GitHub: github.com/narthur
 - LinkedIn: linkedin.com/in/nathanarthur
