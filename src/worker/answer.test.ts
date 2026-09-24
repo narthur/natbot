@@ -118,7 +118,7 @@ test("the model sees at most HISTORY_TURNS recorded turns", async () => {
   expect(HISTORY_TURNS).toBe(10);
 });
 
-test("a cancelled chat request cancels the model call", async () => {
+test("the chat request's abort signal is passed to the model call", async () => {
   const { deps, model } = setup();
   const controller = new AbortController();
   await (await answer([msg("user", "q")], deps, controller.signal)).text();
