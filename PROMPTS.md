@@ -183,3 +183,7 @@ Merged. What's next?
 
 Create two follow-up issues--one for creating an adversarial eval, one for adding the ability for users to report responses. And then proceed as recommended, drive to mergable.
 
+## 2026-09-24 14:57:23
+
+Can the ai gateway be defined in the wrangler file and created that way?
+
