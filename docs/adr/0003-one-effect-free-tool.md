@@ -1,6 +1,6 @@
 # The model has one tool, and it has no effects
 
-Under the "Rule of Two" (from Christopher Moravec's episodes [59](https://christophermoravec.com/episode-59-poison-pills/) and [61](https://christophermoravec.com/episode-61-break-the-ai/)), an AI system should combine at most two of: private data, untrusted input, and the ability to act. The bot takes untrusted input by design, the Profile is public (ADR 0001), and the model's only tool drafts a Handoff message. The Visitor sees the draft, can edit it, and has to press a button to send it, always to Nathan. So the model can't cause anything on its own, and the one action in the system needs a human to approve it.
+Under Meta's "Rule of Two" (as covered in [Christopher Moravec's episode 59](https://christophermoravec.com/episode-59-poison-pills/)), an AI system should combine at most two of: private data, untrusted input, and the ability to act. The bot takes untrusted input by design, the Profile is public (ADR 0001), and the model's only tool drafts a Handoff message. The Visitor sees the draft, can edit it, and has to press a button to send it, always to Nathan. So the model can't cause anything on its own, and the one action in the system needs a human to approve it.
 
 ## Consequences
 
