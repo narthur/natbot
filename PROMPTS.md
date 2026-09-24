@@ -231,3 +231,35 @@ Merged and it's working. File a follow-up issue for making the conversation scro
 
 PR 8 is merged. Create a new pr, implement 1, drive to mergable, and then pause so we can explore the other two together
 
+## 2026-09-24 16:09:59
+
+Explore 2
+
+## 2026-09-24 16:11:56
+
+agree
+
+## 2026-09-24 16:12:50
+
+agree
+
+## 2026-09-24 16:13:39
+
+yes
+
+## 2026-09-24 16:14:39
+
+agree
+
+## 2026-09-24 16:15:22
+
+agree
+
+## 2026-09-24 16:16:37
+
+Sure, but a github issue should be created so creating the tests for it isn't dropped
+
+## 2026-09-24 16:17:43
+
+No, include it in 11
+
