@@ -64,12 +64,9 @@ export class ChatAgent extends AIChatAgent<Env, ChatState> {
   async sendHandoff(request: unknown) {
     return sendHandoff(request, {
       human: this.human(),
-      sent: () => this.ctx.storage.kv.get<string[]>("handoffs") ?? [],
-      markSent: (id) => {
-        const sent = [...(this.ctx.storage.kv.get<string[]>("handoffs") ?? []), id];
-        this.ctx.storage.kv.put("handoffs", sent);
-        this.setState({ ...this.state, sentHandoffs: sent });
-      },
+      claimed: () => this.ctx.storage.kv.get<string[]>("handoffs") ?? [],
+      setClaimed: (ids) => this.ctx.storage.kv.put("handoffs", ids),
+      confirm: (id) => this.setState({ ...this.state, sentHandoffs: [...(this.state.sentHandoffs ?? []), id] }),
       spendDaily: () => this.env.Budget.getByName("handoffs").spend(DAILY_HANDOFF_LIMIT),
       isSafe: (text) => isSafe(this.env.AI, text),
       recentTurns: (limit) => this.recentTurns(limit),
@@ -98,7 +95,7 @@ export class ChatAgent extends AIChatAgent<Env, ChatState> {
       ORDER BY rowid`;
   }
 
-  // The gates read KV flags, never the synced state, so a bug in state syncing can only affect the page., never the synced state, so a bug in state syncing can only affect the page.
+  // The gates read KV, never the synced state, so a bug in state syncing can only affect the page.
   private passedTurnstile() {
     return this.ctx.storage.kv.get("human") === true;
   }

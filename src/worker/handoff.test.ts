@@ -7,11 +7,15 @@ const turns: Turn[] = [{ question: "q", answer: "a" }];
 
 /** A verified Conversation with nothing sent, a daily budget left, and a safe message. Override any part. */
 function setup(overrides: Partial<HandoffDeps> = {}) {
+  let claimed: string[] = [];
   const sent: string[] = [];
   const deps: HandoffDeps = {
     human: { verified: () => true, verify: vi.fn(async () => true), markVerified: vi.fn() },
-    sent: () => sent,
-    markSent: (id) => sent.push(id),
+    claimed: () => claimed,
+    setClaimed: (ids) => {
+      claimed = ids;
+    },
+    confirm: (id) => sent.push(id),
     spendDaily: vi.fn(async () => true),
     isSafe: vi.fn(async () => true),
     recentTurns: vi.fn(() => turns),
@@ -20,7 +24,7 @@ function setup(overrides: Partial<HandoffDeps> = {}) {
     now: () => new Date("2026-09-24T12:00:00Z"),
     ...overrides,
   };
-  return { deps, sent };
+  return { deps, sent, claimed: () => claimed };
 }
 
 test("a valid Handoff starts the Workflow with the trimmed message and recent turns", async () => {
@@ -34,6 +38,7 @@ test("a valid Handoff starts the Workflow with the trimmed message and recent tu
     sentAt: "2026-09-24T12:00:00.000Z",
   });
   expect(deps.recentTurns).toHaveBeenCalledWith(HANDOFF_TURNS);
+  expect(deps.isSafe).toHaveBeenCalledWith("Has he used Kafka?");
   expect(sent).toEqual(["h1"]);
   expect(DAILY_HANDOFF_LIMIT).toBe(20);
 });
@@ -97,6 +102,7 @@ test("an unsafe message is blocked; a moderation outage lets it through", async 
   expect(await sendHandoff(request, blocked.deps)).toEqual({ sent: false, reason: "This message can't be sent." });
   expect(blocked.deps.start).not.toHaveBeenCalled();
   expect(blocked.sent).toEqual([]);
+  expect(blocked.claimed()).toEqual([]);
 
   const outage = setup({ isSafe: vi.fn(async () => Promise.reject(new Error("AI down"))) });
   expect(await sendHandoff(request, outage.deps)).toEqual({ sent: true });
@@ -105,7 +111,36 @@ test("an unsafe message is blocked; a moderation outage lets it through", async 
 
 test("a Workflow that won't start isn't recorded as sent", async () => {
   vi.spyOn(console, "error").mockImplementation(() => {});
-  const { deps, sent } = setup({ start: vi.fn(async () => Promise.reject(new Error("no"))) });
+  const { deps, sent, claimed } = setup({ start: vi.fn(async () => Promise.reject(new Error("no"))) });
   expect(await sendHandoff(request, deps)).toMatchObject({ sent: false });
   expect(sent).toEqual([]);
+  expect(claimed()).toEqual([]);
+});
+
+test("an email address pasted with spaces around it is accepted, trimmed", async () => {
+  const { deps } = setup();
+  expect(await sendHandoff({ ...request, email: "  recruiter@example.com\n" }, deps)).toEqual({ sent: true });
+  expect(deps.start).toHaveBeenCalledWith(expect.objectContaining({ email: "recruiter@example.com" }));
+});
+
+test("concurrent sends can't double-send or pass the cap while earlier sends are still in flight", async () => {
+  // Moderation stays pending until released, so every send is mid-flight at once.
+  let release = () => {};
+  const gate = new Promise<void>((r) => {
+    release = r;
+  });
+  const { deps } = setup({ isSafe: vi.fn(() => gate.then(() => true)) });
+  const sends = ["a", "a", "b", "c", "d"].map((id) => sendHandoff({ ...request, id }, deps));
+  release();
+  const results = await Promise.all(sends);
+  expect(deps.start).toHaveBeenCalledTimes(3);
+  expect(results.filter((r) => !r.sent)).toHaveLength(1);
+});
+
+test("a failing daily-limit check refuses the send and frees the slot", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const { deps, claimed } = setup({ spendDaily: vi.fn(async () => Promise.reject(new Error("DO down"))) });
+  expect(await sendHandoff(request, deps)).toMatchObject({ sent: false });
+  expect(console.error).toHaveBeenCalledWith("handoff daily limit check failed", expect.any(Error));
+  expect(claimed()).toEqual([]);
 });

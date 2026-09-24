@@ -182,8 +182,9 @@ test("the model can offer a draft Handoff, which reaches the page as a tool part
       }),
     }),
   });
-  const { deps } = setup({ model });
+  const { deps, turns } = setup({ model });
   const body = await (await answer([msg("user", "Kafka?")], deps)).text();
+  expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't say." }]);
   expect(model.doStreamCalls[0].tools?.map((t) => t.name)).toEqual(["draftHandoff"]);
   expect(body).toContain('"toolName":"draftHandoff"');
   expect(body).toContain('"output":{"drafted":true}');

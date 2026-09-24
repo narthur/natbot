@@ -34,7 +34,7 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
     setSending(true);
     setProblem(undefined);
     try {
-      const result = await send({ id, message, email, turnstileToken: needsToken ? token : undefined });
+      const result = await send({ id, message, email: email.trim(), turnstileToken: needsToken ? token : undefined });
       if (!result.sent) setProblem(result.reason);
     } catch {
       setProblem("Something went wrong sending that. Please try again.");
