@@ -271,3 +271,11 @@ Merged. What's next?
 
 Yes, proceed, drive to mergable
 
+## 2026-09-24 16:53:24
+
+When I create with Spin it lets me select a tld but not a subdomain. I already have a turnstile wdiget set up with spin for nathanarthur.com for the newsletter subscribe form
+
+## 2026-09-24 16:54:51
+
+site key: 0x4AAAAAAFCsuz3x4Z505mBi
+

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 // Site keys are public. The dev key is Cloudflare's test key that always passes.
-const SITE_KEY = import.meta.env.DEV ? "1x00000000000000000000AA" : "SITE_KEY_PENDING";
+const SITE_KEY = import.meta.env.DEV ? "1x00000000000000000000AA" : "0x4AAAAAAFCsuz3x4Z505mBi";
 
 type Turnstile = {
   render: (el: HTMLElement, options: Record<string, unknown>) => string;
