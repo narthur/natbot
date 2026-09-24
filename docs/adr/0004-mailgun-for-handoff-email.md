@@ -4,5 +4,6 @@ Handoff notifications are sent, and Nathan's replies received, through the Mailg
 
 ## Consequences
 
-- The Worker holds a Mailgun API key (to send) and a webhook signing key (to verify replies) as secrets.
-- Visitor replies (v2) go out from the same domain, so its sending reputation is shared with anything else sent from `mail.nathanarthur.com`.
+- The Worker holds its own domain-scoped Mailgun sending key and the webhook signing key as secrets. It doesn't reuse the newsletter Worker's key, so either key can be revoked without breaking the other Worker.
+- The domain is shared with the newsletter Worker (`rss-to-email`, which serves `mail.nathanarthur.com` over HTTP and sends from `newsletter@`). The two share sending reputation and Mailgun's per-domain suppression lists: someone who marks the newsletter as spam won't receive a v2 Handoff answer either. That's acceptable at Handoff volumes.
+- Inbound routes must match only Handoff reply addresses, so nothing sent to the newsletter's addresses reaches the bot.

@@ -151,3 +151,7 @@ Let's settle on a stack. I'm thinking pnpm monorepo, full-stack typescript, one 
 
 As recommended
 
+## 2026-09-24 13:51:53
+
+Is the setup you've recommended compatible with ~/code/rss-to-email-worker, already deployed?
+
