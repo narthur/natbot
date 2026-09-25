@@ -178,3 +178,15 @@ test("a failing daily-limit check refuses the send and frees the slot", async ()
   expect(console.error).toHaveBeenCalledWith("handoff daily limit check failed", expect.any(Error));
   expect(claimed()).toEqual([]);
 });
+
+test("once the Workflow has started, a later failure never frees the claim for a second email", async () => {
+  const { deps, claimed } = setup({
+    confirm: () => {
+      throw new Error("setState failed");
+    },
+  });
+  await expect(sendHandoff(request, deps)).rejects.toThrow("setState failed");
+  expect(claimed()).toEqual(["h1"]);
+  expect(await sendHandoff(request, deps)).toEqual({ sent: true });
+  expect(deps.start).toHaveBeenCalledTimes(1);
+});

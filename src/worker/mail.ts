@@ -35,6 +35,8 @@ export async function sendMail(apiKey: string, mail: Mail): Promise<void> {
     method: "POST",
     headers: { Authorization: `Basic ${btoa(`api:${apiKey}`)}` },
     body: form,
+    // Shorter than the Workflow step's timeout, which doesn't abort the request itself.
+    signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`mailgun ${res.status}: ${await res.text()}`);
 }

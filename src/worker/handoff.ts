@@ -64,27 +64,26 @@ export async function sendHandoff(request: unknown, deps: HandoffDeps): Promise<
   }
   deps.setClaims({ ...live, [id]: { sent: false, at: now } });
 
-  // Anything short of a confirmed send releases the claim, including an unexpected throw.
+  // A refusal or an unexpected throw before the Workflow starts releases the claim. Once it has started,
+  // nothing releases it, or a retry could email Nathan twice.
   const release = () => {
     const { [id]: _released, ...rest } = deps.claims();
     deps.setClaims(rest);
   };
+  let result: HandoffResult;
   try {
-    const result = await deliver({ text, email, turnstileToken }, deps);
-    if (!result.sent) release();
-    else {
-      deps.setClaims({ ...deps.claims(), [id]: { sent: true, at: now } });
-      deps.confirm(id);
-    }
-    return result;
+    result = await deliver({ id, at: now, text, email, turnstileToken }, deps);
   } catch (error) {
     release();
     throw error;
   }
+  if (result.sent) deps.confirm(id);
+  else release();
+  return result;
 }
 
 async function deliver(
-  { text, email, turnstileToken }: { text: string; email: string; turnstileToken: unknown },
+  { id, at, text, email, turnstileToken }: { id: string; at: number; text: string; email: string; turnstileToken: unknown },
   deps: HandoffDeps,
 ): Promise<HandoffResult> {
   if (!deps.human.verified()) {
@@ -115,6 +114,7 @@ async function deliver(
     return refuse("This message can't be sent.");
   }
 
+  deps.setClaims({ ...deps.claims(), [id]: { sent: true, at } });
   try {
     await deps.start({
       conversation: deps.conversation,
