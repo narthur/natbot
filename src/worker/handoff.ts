@@ -5,6 +5,7 @@ export const HANDOFFS_PER_CONVERSATION = 3;
 export const DAILY_HANDOFF_LIMIT = 20;
 export const HANDOFF_TURNS = 5;
 // A claim that hasn't confirmed by now was abandoned (the Durable Object was evicted mid-send), so it's reclaimable.
+// This assumes every step of a send finishes well within it: siteverify and moderation both have timeouts.
 export const STALE_CLAIM_MS = 5 * 60 * 1000;
 // One plain address: no whitespace or header punctuation, so it's safe as a Reply-To value.
 const EMAIL = /^[^\s@<>,;:"()[\]\\]+@[^\s@<>,;:"()[\]\\]+\.[^\s@<>,;:"()[\]\\]+$/;

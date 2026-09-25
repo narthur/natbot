@@ -5,7 +5,8 @@ export async function isSafe(ai: Ai, text: string): Promise<boolean> {
   const { response } = await ai.run(
     GUARD,
     { messages: [{ role: "user", content: text }], response_format: { type: "json_object" } },
-    { gateway: { id: "natbot" } },
+    // Bounded so a live send never looks abandoned (STALE_CLAIM_MS in handoff.ts).
+    { gateway: { id: "natbot" }, signal: AbortSignal.timeout(20_000) },
   );
   if (typeof response === "object" && typeof response.safe === "boolean") return response.safe;
   // Llama Guard doesn't always honor JSON mode; then it answers "safe", or "unsafe" followed by category codes.
