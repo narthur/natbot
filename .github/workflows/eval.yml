@@ -59,8 +59,8 @@ jobs:
         run: |
           if [ ! -f evals/report.md ]; then echo "No report; the eval didn't run." >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
           cat evals/report.md >> "$GITHUB_STEP_SUMMARY"
-          # Update the previous eval comment instead of adding one per push.
-          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- natbot-eval -->")) | .id' | tail -1)
+          # Update the bot's previous eval comment instead of adding one per push; only its own, so nobody else's is edited.
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- natbot-eval -->"))) | .id' | tail -1)
           if [ -n "$id" ]; then
             gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@evals/report.md > /dev/null
           else
