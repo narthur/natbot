@@ -113,6 +113,7 @@ test("an exhausted budget stops the model call", async () => {
 });
 
 test("an empty answer is not recorded, and the Visitor is told it couldn't be finished", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
   const { deps, turns } = setup({ model: modelSaying("") });
   expect(await (await answer([msg("user", "q")], deps)).text()).toContain(UNFINISHED);
   expect(turns).toEqual([]);
@@ -276,16 +277,27 @@ test("a question takes at most MAX_STEPS model calls: one search, then a draft, 
 });
 
 test("a search followed by no answer and no draft gets the fallback, after what the model did write", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   const model = steps([...say("Let me check his posts."), searchCall, toolFinish], [stop]);
   const { deps, turns } = setup({ model });
   const body = await (await answer([msg("user", "Recent thoughts?")], deps)).text();
   expect(body.indexOf(UNFINISHED)).toBeGreaterThan(body.indexOf("Let me check his posts."));
   expect(body.indexOf(UNFINISHED)).toBeLessThan(body.lastIndexOf('"type":"finish"'));
   expect(turns).toEqual([{ question: "Recent thoughts?", answer: "Let me check his posts." }]);
+  expect(warn).toHaveBeenCalledWith("model stopped without an answer");
 });
 
 test("an answer the model finished gets no fallback", async () => {
   const model = steps([searchCall, toolFinish], [...say("He wrote about TDD."), stop]);
   const { deps } = setup({ model });
   expect(await (await answer([msg("user", "TDD?")], deps)).text()).not.toContain(UNFINISHED);
+});
+
+test("a model error mid-answer shows its own apology, not the unfinished one too", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const model = steps([{ type: "error" as const, error: new Error("connection lost") }]);
+  const { deps } = setup({ model });
+  const body = await (await answer([msg("user", "q")], deps)).text();
+  expect(body).toContain("Sorry, something went wrong");
+  expect(body).not.toContain(UNFINISHED);
 });

@@ -21,7 +21,7 @@ export const MODEL_SETTINGS = { chat_template_kwargs: { enable_thinking: false }
 export const MAX_QUESTION_CHARS = 2000;
 // Bounds the input tokens every call pays for, alongside the whole Profile (ADR 0002).
 export const HISTORY_TURNS = 10;
-// Model calls per question: room for two tool steps (a search and a draft, or two searches), then the answer.
+// Model calls per question: room for a search and then a draft, then the answer.
 // Every call pays for the whole Profile again, so this sets a question's worst-case cost.
 export const MAX_STEPS = 3;
 
@@ -125,8 +125,8 @@ export async function answer(
     messages: modelMessages(deps.history.recent(HISTORY_TURNS), question),
     tools: { draftHandoff, searchWriting: searchWriting(deps.searchWriting) },
     // After a tool call the model gets another step; without one, a turn that opens with a draft ends with only
-    // a card. The last step, and any step after a draft (one draft per question), can only write text. One search
-    // per question too: after two, the text-only last step sometimes wrote nothing at all.
+    // a card. The last step, and any step after a draft (one draft per question), can only write text. One searching
+    // step per question too: after two, the text-only last step sometimes wrote nothing at all.
     stopWhen: stepCountIs(MAX_STEPS),
     prepareStep: ({ stepNumber, steps }) => {
       const called = (name: string) => steps.some((s) => s.toolCalls.some((c) => c.toolName === name));
@@ -163,8 +163,12 @@ export async function answer(
       const steps = await Promise.resolve(result.steps).catch(() => undefined);
       const last = steps?.at(-1);
       const drafted = steps?.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"));
-      if (last && !last.text.trim() && !last.toolCalls.length && !drafted) notice(writer, UNFINISHED);
-      writer.write({ type: "finish" });
+      // Only a clean stop: an error or an abort has already told the Visitor what happened.
+      if (last?.finishReason === "stop" && !abortSignal?.aborted && !last.text.trim() && !last.toolCalls.length && !drafted) {
+        console.warn("model stopped without an answer");
+        notice(writer, UNFINISHED);
+      }
+      writer.write({ type: "finish", finishReason: last?.finishReason });
     },
   });
   return createUIMessageStreamResponse({ stream });
