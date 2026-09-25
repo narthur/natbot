@@ -503,3 +503,7 @@ Now you say drafting goes down. That's not necessarily bad. If it's going down b
 
 Did you figure out why the drop? If it's also not doing a search, just search existing causing the drop feels weird.
 
+## 2026-09-25 17:23:23
+
+All done, merged, deployed, and job triggered. Let's create a new pr that gives users a way to reset the conversation if they'd like to start fresh.
+

@@ -135,6 +135,16 @@ class ChatAgent extends AIChatAgent<Env, ChatState> {
     return (await this.listSchedules()).filter((s) => s.callback === "forget");
   }
 
+  /**
+   * Called by the page when the Visitor starts over: forgets this Conversation now instead of 30 days from now.
+   * Scheduled rather than run here, because destroy() ends the Durable Object before this call could reply.
+   */
+  @callable()
+  async startOver() {
+    setTag("conversation", this.name);
+    await this.schedule(0, "forget");
+  }
+
   /** Deletes everything in this Conversation: turns, persisted messages, the Turnstile pass, Handoff ids, and its schedules. */
   async forget() {
     setTag("conversation", this.name);
