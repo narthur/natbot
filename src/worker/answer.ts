@@ -3,6 +3,7 @@ import {
   createUIMessageStreamResponse,
   type LanguageModel,
   type ModelMessage,
+  stepCountIs,
   streamText,
   tool,
   type UIMessage,
@@ -10,9 +11,13 @@ import {
 import { z } from "zod";
 import { SYSTEM_PROMPT } from "./prompt";
 
-export const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+// Chosen by the adversarial eval (evals/): 78/87 against 61/87 for Llama 3.3, with none of Llama's
+// tool-use failures (empty answers, tool calls written out as text, drafts for questions it had answered).
+export const MODEL = "@cf/qwen/qwen3.8-27b";
+// Qwen reasons silently before answering by default: slow, and it can spend the whole output budget on it.
+export const MODEL_SETTINGS = { chat_template_kwargs: { enable_thinking: false } };
 export const MAX_QUESTION_CHARS = 2000;
-// Keeps the prompt well inside the model's context alongside the Profile (ADR 0002): 24k tokens for the Llama 3.3 MODEL above.
+// Bounds the input tokens every call pays for, alongside the whole Profile (ADR 0002).
 export const HISTORY_TURNS = 10;
 
 /**
@@ -85,15 +90,20 @@ export async function answer(
     system: SYSTEM_PROMPT,
     messages: modelMessages(deps.history.recent(HISTORY_TURNS), question),
     tools: { draftHandoff },
+    // After drafting, the model gets one more step to write its answer; without it, a turn that opens with the
+    // tool call ends with only a card. At most two model calls per question.
+    stopWhen: stepCountIs(2),
     maxOutputTokens: 600,
     // One accepted question spends one Budget slot, so keep retries from multiplying the real calls behind it.
     maxRetries: 1,
     abortSignal,
-    onFinish: ({ text, toolCalls }) => {
-      // The model sometimes offers a draft without writing anything; record what happened so history and
-      // Handoff emails still show the question. A truly empty answer would be replayed as history, so skip it.
-      const offered = toolCalls.some((c) => c.toolName === "draftHandoff");
-      const recorded = text.trim() ? text : offered ? OFFERED_HANDOFF : "";
+    onFinish: ({ steps }) => {
+      // `text` would be only the last step's, so join every step's. If the model offered a draft without writing
+      // anything, record that, so history and Handoff emails still show the question. A truly empty answer would
+      // be replayed as history, so skip it.
+      const text = steps.map((s) => s.text.trim()).filter(Boolean).join("\n\n");
+      const offered = steps.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"));
+      const recorded = text || (offered ? OFFERED_HANDOFF : "");
       if (recorded) deps.history.record({ question, answer: recorded });
     },
   });

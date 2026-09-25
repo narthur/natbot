@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 
-// ADR 0002: the whole Profile goes in every prompt, and Llama 3.3's context is 24k tokens.
+// ADR 0002: the whole Profile goes in every prompt, so its size is the main cost of every answer.
 // ponytail: ~4 characters per token for English prose; use the real tokenizer if the Profile nears the limit.
 const TOKEN_BUDGET = 10_000;
 

@@ -168,20 +168,22 @@ test("a rate-limited Conversation doesn't reach Turnstile", async () => {
   expect(human.verify).not.toHaveBeenCalled();
 });
 
-test("the model can offer a draft Handoff, which reaches the page as a tool part", async () => {
-  const model = new MockLanguageModelV4({
-    doStream: async () => ({
-      stream: simulateReadableStream({
-        chunks: [
-          { type: "text-start" as const, id: "t" },
-          { type: "text-delta" as const, id: "t", delta: "The profile doesn't say." },
-          { type: "text-end" as const, id: "t" },
-          { type: "tool-call" as const, toolCallId: "call1", toolName: "draftHandoff", input: '{"question":"Kafka?"}' },
-          { type: "finish" as const, finishReason: { unified: "tool-calls" as const, raw: "tool_calls" }, usage },
-        ],
-      }),
-    }),
+const toolCall = { type: "tool-call" as const, toolCallId: "call1", toolName: "draftHandoff", input: '{"question":"Kafka?"}' };
+const toolFinish = { type: "finish" as const, finishReason: { unified: "tool-calls" as const, raw: "tool_calls" }, usage };
+const stop = { type: "finish" as const, finishReason: { unified: "stop" as const, raw: "stop" }, usage };
+const say = (text: string) => [
+  { type: "text-start" as const, id: "t" },
+  { type: "text-delta" as const, id: "t", delta: text },
+  { type: "text-end" as const, id: "t" },
+];
+/** A model whose calls return these chunk lists in order, one per step. */
+const steps = (...calls: object[][]) =>
+  new MockLanguageModelV4({
+    doStream: calls.map((chunks) => ({ stream: simulateReadableStream({ chunks: chunks as never[] }) })),
   });
+
+test("the model can offer a draft Handoff, which reaches the page as a tool part", async () => {
+  const model = steps([...say("The profile doesn't say."), toolCall, toolFinish], [stop]);
   const { deps, turns } = setup({ model });
   const body = await (await answer([msg("user", "Kafka?")], deps)).text();
   expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't say." }]);
@@ -190,18 +192,25 @@ test("the model can offer a draft Handoff, which reaches the page as a tool part
   expect(body).toContain('"output":{"drafted":true}');
 });
 
+test("after a draft, the model gets a second step to write its answer", async () => {
+  const model = steps([toolCall, toolFinish], [...say("The profile doesn't mention Kafka."), stop]);
+  const { deps, turns } = setup({ model });
+  const body = await (await answer([msg("user", "Kafka?")], deps)).text();
+  expect(model.doStreamCalls).toHaveLength(2);
+  expect(body).toContain("The profile doesn't mention Kafka.");
+  expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't mention Kafka." }]);
+});
+
 test("a draft offered without any text is still recorded, so history shows the question", async () => {
-  const model = new MockLanguageModelV4({
-    doStream: async () => ({
-      stream: simulateReadableStream({
-        chunks: [
-          { type: "tool-call" as const, toolCallId: "call1", toolName: "draftHandoff", input: '{"question":"Kafka?"}' },
-          { type: "finish" as const, finishReason: { unified: "tool-calls" as const, raw: "tool_calls" }, usage },
-        ],
-      }),
-    }),
-  });
+  const model = steps([toolCall, toolFinish], [stop]);
   const { deps, turns } = setup({ model });
   await (await answer([msg("user", "Kafka?")], deps)).text();
   expect(turns).toEqual([{ question: "Kafka?", answer: OFFERED_HANDOFF }]);
+});
+
+test("a model that keeps calling the tool stops after two steps", async () => {
+  const model = steps([toolCall, toolFinish], [toolCall, toolFinish], [...say("never reached"), stop]);
+  const { deps } = setup({ model });
+  await (await answer([msg("user", "Kafka?")], deps)).text();
+  expect(model.doStreamCalls).toHaveLength(2);
 });

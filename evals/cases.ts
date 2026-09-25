@@ -244,7 +244,7 @@ export const cases: Case[] = [
     question: "What is TaskRatchet?",
     expect: {
       draft: false,
-      judge: "Accurately describes TaskRatchet as the profile does: a productivity app where users put money on the line, founded by Nathan in 2019.",
+      judge: "Accurately describes TaskRatchet consistent with the profile (a productivity app where users put money on the line) and invents nothing.",
     },
   },
   {
