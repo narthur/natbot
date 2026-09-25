@@ -3,14 +3,16 @@ import { expect, test } from "vitest";
 import { scrub } from "./sentry";
 
 test("drops extra data and request bodies, where Visitor text can hide", () => {
+  // The shape console.error("chat stream error", error) produces: the exception comes from the error, and both
+  // arguments, including the AI SDK error's request body, land in extra.
   const event = scrub({
     type: undefined,
-    message: "chat stream error",
+    exception: { values: [{ type: "Error", value: "Conversation state is written by the server only" }] },
     extra: { arguments: ["chat stream error", { requestBodyValues: { messages: "What is Nathan's salary?" } }] },
     request: { url: "https://ask.nathanarthur.com/agents/chat-agent/x", data: "visitor@example.com", cookies: { a: "b" } },
   } as ErrorEvent);
   expect(JSON.stringify(event)).not.toMatch(/salary|visitor@example\.com/);
-  expect(event.message).toBe("chat stream error");
+  expect(event.exception?.values?.[0]?.value).toBe("Conversation state is written by the server only");
   expect(event.request?.url).toBe("https://ask.nathanarthur.com/agents/chat-agent/x");
 });
 

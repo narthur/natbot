@@ -22,7 +22,7 @@ const FORGET_AFTER_SECONDS = 30 * 24 * 60 * 60;
 export type ChatState = { verified: boolean; sentHandoffs?: string[] };
 
 /** Adapts one Conversation's Durable Object to the answer module. */
-class Conversation extends AIChatAgent<Env, ChatState> {
+class ChatAgent extends AIChatAgent<Env, ChatState> {
   maxPersistedMessages = 100;
   initialState: ChatState = { verified: false, sentHandoffs: [] };
 
@@ -136,5 +136,7 @@ class Conversation extends AIChatAgent<Env, ChatState> {
 }
 
 // Errors in the Conversation's handlers, callables and scheduled callbacks reach Sentry (issue #16).
-export const ChatAgent = instrumentAgentWithSentry(sentryOptions, Conversation);
-export type ChatAgent = Conversation;
+// The class keeps its name: the agents SDK and Sentry label logs and spans with it.
+const InstrumentedChatAgent = instrumentAgentWithSentry(sentryOptions, ChatAgent);
+export { InstrumentedChatAgent as ChatAgent };
+export type { ChatAgent as ChatAgentClass };

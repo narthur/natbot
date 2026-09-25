@@ -44,7 +44,9 @@ test("sendMail posts the fields to Mailgun with the domain key", async () => {
   expect([...form.keys()].sort()).toEqual(["from", "h:Reply-To", "subject", "text", "to"]);
 });
 
-test("a Mailgun error throws with the status and body, so the Workflow retries", async () => {
-  vi.stubGlobal("fetch", vi.fn(async () => new Response("Forbidden", { status: 401 })));
-  await expect(sendMail("bad", handoffEmail(params, "n@n.com"))).rejects.toThrow("mailgun 401: Forbidden");
+test("a Mailgun error throws with the status, so the Workflow retries, and keeps the body out of the error", async () => {
+  // Mailgun can echo the Visitor's address; the error goes to Sentry, so only the status goes in it.
+  vi.stubGlobal("fetch", vi.fn(async () => new Response("'visitor@example.com' is not a valid address", { status: 400 })));
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  await expect(sendMail("bad", handoffEmail(params, "n@n.com"))).rejects.toThrow(/^mailgun 400$/);
 });

@@ -38,5 +38,9 @@ export async function sendMail(apiKey: string, mail: Mail): Promise<void> {
     // Shorter than the Workflow step's timeout, which doesn't abort the request itself.
     signal: AbortSignal.timeout(20_000),
   });
-  if (!res.ok) throw new Error(`mailgun ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    // The body can echo the Visitor's address, so it goes to the Worker's logs, not into the error Sentry sees.
+    console.warn("mailgun rejected a handoff email", await res.text());
+    throw new Error(`mailgun ${res.status}`);
+  }
 }

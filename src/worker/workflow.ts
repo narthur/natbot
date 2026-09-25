@@ -5,7 +5,7 @@ import { handoffEmail, sendMail } from "./mail";
 import { sentryOptions } from "./sentry";
 
 /** Delivers one Handoff to Nathan, retrying through Mailgun outages. The instance keeps the Handoff either way. */
-class Delivery extends WorkflowEntrypoint<Env, HandoffParams> {
+class HandoffWorkflow extends WorkflowEntrypoint<Env, HandoffParams> {
   async run(event: WorkflowEvent<HandoffParams>, step: WorkflowStep) {
     setTag("conversation", event.payload.conversation);
     try {
@@ -22,4 +22,5 @@ class Delivery extends WorkflowEntrypoint<Env, HandoffParams> {
 }
 
 // A Handoff that fails for good must reach Nathan some other way (issue #16).
-export const HandoffWorkflow = instrumentWorkflowWithSentry(sentryOptions, Delivery);
+const InstrumentedHandoffWorkflow = instrumentWorkflowWithSentry(sentryOptions, HandoffWorkflow);
+export { InstrumentedHandoffWorkflow as HandoffWorkflow };
