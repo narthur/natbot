@@ -2,12 +2,12 @@
 
 A chat-first resume at **[ask.nathanarthur.com](https://ask.nathanarthur.com)**. Recruiters and hiring managers ask questions about Nathan Arthur's career and get answers from a curated profile. When the profile doesn't cover a question, they can send it to Nathan and he replies by email.
 
-It started as the optional AI assignment on a Cloudflare application, and it runs entirely on Cloudflare:
+It started as the optional AI assignment on a Cloudflare application. It runs on Cloudflare, with Handoff email sent through Mailgun:
 
 | Assignment requirement | Here |
 | --- | --- |
 | LLM | Qwen 3.8 27B on Workers AI, through AI Gateway |
-| Workflow / coordination | One Durable Object per Conversation (Agents SDK), a singleton Durable Object for the daily budget, and a Workflow that emails Handoffs to Nathan with retries |
+| Workflow / coordination | One Durable Object per Conversation (Agents SDK), Budget Durable Objects that cap daily answers and Handoffs, and a Workflow that emails Handoffs to Nathan with retries |
 | User input via chat | A React chat page served as Workers static assets and streamed over WebSocket |
 | Memory / state | Each Conversation's history lives in its Durable Object's SQLite and is resumed from the same browser. It is forgotten 30 days after the last question. |
 
@@ -35,10 +35,10 @@ flowchart LR
 A public, anonymous LLM endpoint is an attack surface, so the defenses are layered and each one fails independently:
 
 - **Cost.** Per-IP connect and per-Conversation message rate limits, plus a Budget Durable Object that hard-caps model calls per day (1,000 answers and 20 Handoffs).
-- **Bots.** Turnstile guards a Conversation's first question and every Handoff. Siteverify checks the hostname and action ([ADR 0005](docs/adr/0005-turnstile-guards-the-first-question.md)).
+- **Bots.** Turnstile checks each Conversation once, on whichever comes first: its first question or a Handoff sent before any question. Siteverify checks the hostname and action ([ADR 0005](docs/adr/0005-turnstile-guards-the-first-question.md)).
 - **Prompt injection and persona breaks.** The system prompt is a set of absolute rules ([`src/worker/prompt.ts`](src/worker/prompt.ts)). The assistant turn can't be prefilled. The Profile is curated, so private data never reaches the model ([ADR 0001](docs/adr/0001-curated-public-profile.md)).
 - **Actions.** The model has no tool with an effect. Handoffs are capped per Conversation and per day, and Llama Guard screens them before they're sent.
-- **Evals.** An adversarial suite runs the real answer pipeline against 29 cases in these categories: off-topic pulls, persona breaks, fabrication pressure, damaging statements, private-data probing, prompt injection, Handoff abuse, and controls the bot must still answer. Deterministic checks and an LLM judge (`gpt-oss-120b`) grade the answers. CI runs it on every PR that changes the prompt or answer flow and posts the results. It chose the production model: 78/87 for Qwen 3.8 27B against 61/87 for Llama 3.3 70B ([#20](https://github.com/narthur/natbot/pull/20)).
+- **Evals.** An adversarial suite runs the real answer pipeline against 29 cases in these categories: off-topic pulls, persona breaks, fabrication pressure, damaging statements, private-data probing, prompt injection, Handoff abuse, and controls the bot must still answer. Deterministic checks and an LLM judge (`gpt-oss-120b`) grade the answers. A separate, non-blocking Eval workflow runs it on PRs that touch the Profile, prompt, answer flow or eval suite, and posts the results as a PR comment. Answers vary between runs, so the workflow never fails a PR. It chose the production model: 78/87 for Qwen 3.8 27B against 61/87 for Llama 3.3 70B ([#20](https://github.com/narthur/natbot/pull/20)).
 
 ## Running it
 
@@ -64,7 +64,7 @@ pnpm test     # unit tests, including a check that the Profile stays within its 
 pnpm eval     # the adversarial eval against real Workers AI; EVAL_MODEL=<model> compares another model, EVAL_RUNS=3 repeats cases
 ```
 
-Merges to `main` build and deploy through GitHub Actions ([`deploy.yml`](.github/workflows/deploy.yml)). Production needs the `TURNSTILE_SECRET_KEY` and `MAILGUN_API_KEY` secrets (`pnpm wrangler secret put <NAME>`).
+Merges to `main` build and deploy through GitHub Actions ([`deploy.yml`](.github/workflows/deploy.yml)). Production needs the `TURNSTILE_SECRET_KEY` and `MAILGUN_API_KEY` Worker secrets (`pnpm wrangler secret put <NAME>`). The deploy workflow needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets, and the eval workflow needs `CLOUDFLARE_AI_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. To deploy your own copy, also change the custom-domain route in `wrangler.jsonc` and the Turnstile site key in `src/turnstile.ts`.
 
 ## Layout
 
