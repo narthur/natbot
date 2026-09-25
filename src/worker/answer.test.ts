@@ -208,9 +208,11 @@ test("a draft offered without any text is still recorded, so history shows the q
   expect(turns).toEqual([{ question: "Kafka?", answer: OFFERED_HANDOFF }]);
 });
 
-test("a model that keeps calling the tool stops after two steps", async () => {
-  const model = steps([toolCall, toolFinish], [toolCall, toolFinish], [...say("never reached"), stop]);
+test("the second step can't draft again, so a question gets at most one card and two model calls", async () => {
+  const model = steps([toolCall, toolFinish], [...say("The profile doesn't say."), stop]);
   const { deps } = setup({ model });
   await (await answer([msg("user", "Kafka?")], deps)).text();
   expect(model.doStreamCalls).toHaveLength(2);
+  expect(model.doStreamCalls[0].tools).toHaveLength(1);
+  expect(model.doStreamCalls[1].tools ?? []).toHaveLength(0);
 });

@@ -93,6 +93,8 @@ export async function answer(
     // After drafting, the model gets one more step to write its answer; without it, a turn that opens with the
     // tool call ends with only a card. At most two model calls per question.
     stopWhen: stepCountIs(2),
+    // One draft per question: the second step can only write text.
+    prepareStep: ({ stepNumber }) => (stepNumber > 0 ? { activeTools: [] } : undefined),
     maxOutputTokens: 600,
     // One accepted question spends one Budget slot, so keep retries from multiplying the real calls behind it.
     maxRetries: 1,
