@@ -6,7 +6,7 @@ import "./index.css";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {/* useAgentChat suspends while it loads a returning visitor's Conversation. */}
-    <Suspense fallback={<p className="p-12 text-center text-stone-500">Loading your conversation…</p>}>
+    <Suspense fallback={<p className="p-12 text-center text-muted">Loading your conversation…</p>}>
       <App />
     </Suspense>
   </StrictMode>,

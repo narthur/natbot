@@ -23,7 +23,7 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
 
   if (sent) {
     return (
-      <p className="rounded-lg border border-stone-300 px-4 py-3 text-sm dark:border-stone-700">
+      <p className="not-prose border border-ink bg-card px-5 py-4 font-serif text-lg">
         Sent to Nathan. He'll reply to the email address you gave.
       </p>
     );
@@ -48,25 +48,26 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
   return (
     <form
       onSubmit={onSubmit}
-      className="not-prose flex flex-col gap-2 rounded-lg border border-stone-300 p-4 text-sm dark:border-stone-700"
+      className="not-prose flex flex-col gap-3 border border-ink bg-card px-5 py-4 font-sans text-base text-ink"
     >
-      <p className="font-medium">
-        {question ? "The profile doesn't cover this. Send it to Nathan?" : "Send a question to Nathan"}
+      <p className="label text-accent">Letter to Nathan</p>
+      <p className="font-serif text-lg">
+        {question ? "The profile doesn't cover this. Send it to Nathan?" : "Send a question to Nathan"}{" "}
+        He gets it by email and replies to you directly.
       </p>
-      <p className="text-stone-600 dark:text-stone-400">He gets it by email and replies to you directly.</p>
       <label className="flex flex-col gap-1">
-        <span>Message</span>
+        <span className="label text-muted">Message</span>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           maxLength={2000}
-          rows={3}
+          rows={2}
           required
-          className="rounded-md border border-stone-300 bg-transparent px-3 py-2 dark:border-stone-700"
+          className="border-b border-rule bg-transparent py-1.5 font-serif text-lg focus:border-ink focus:outline-none"
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span>Your email</span>
+        <span className="label text-muted">Your email</span>
         <input
           type="email"
           value={email}
@@ -74,14 +75,15 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
           maxLength={254}
           required
           autoComplete="email"
-          className="rounded-md border border-stone-300 bg-transparent px-3 py-2 dark:border-stone-700"
+          placeholder="you@company.com"
+          className="min-h-11 border-b border-ink bg-transparent font-serif text-lg placeholder:text-muted focus:outline-none"
         />
       </label>
-      {problem && <p className="text-red-700 dark:text-red-400">{problem}</p>}
+      {problem && <p className="text-accent">{problem}</p>}
       <button
         type="submit"
         disabled={!canSend}
-        className="self-start rounded-lg bg-stone-900 px-4 py-2 text-white disabled:opacity-40 dark:bg-stone-100 dark:text-stone-900"
+        className="label min-h-11 rounded-xs bg-accent px-5 text-card hover:bg-accent-dark disabled:opacity-50 sm:self-end"
       >
         {sending ? "Sending…" : "Send to Nathan"}
       </button>
