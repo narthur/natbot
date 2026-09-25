@@ -9,7 +9,7 @@ It started as the optional AI assignment on a Cloudflare application. It runs on
 | LLM | Qwen 3.8 27B on Workers AI, through AI Gateway |
 | Workflow / coordination | One Durable Object per Conversation (Agents SDK), Budget Durable Objects that cap daily answers and Handoffs, a Workflow that emails Handoffs to Nathan with retries, and a daily cron-started Workflow that indexes Nathan's writing |
 | User input via chat | A React chat page served as Workers static assets and streamed over WebSocket |
-| Memory / state | Each Conversation's history lives in its Durable Object's SQLite and is resumed from the same browser. It is forgotten 30 days after the last question. Nathan's published writing is embedded in Vectorize, with a KV record of what's indexed. |
+| Memory / state | Each Conversation's history lives in its Durable Object's SQLite and is resumed from the same browser. It is forgotten 30 days after the last question, or at once if the Visitor starts over. Nathan's published writing is embedded in Vectorize, with a KV record of what's indexed. |
 
 The prompts used to build it are in [PROMPTS.md](PROMPTS.md). [docs/process.md](docs/process.md) describes what surrounded them: the standing instructions, skills, review loop, hooks and checks that shaped each change.
 
@@ -33,7 +33,7 @@ flowchart LR
 - **Nathan's writing.** The model can search his newsletter and Beeminder blog posts through a `searchWriting` tool backed by Vectorize ([ADR 0006](docs/adr/0006-writing-search-with-vectorize.md)). It attributes and dates what it quotes, and the Profile wins over a post. The page lists the posts each search returned, straight from the tool's result. A daily Workflow re-indexes new and changed posts and drops removed or excluded ones. See [`src/worker/writing.ts`](src/worker/writing.ts).
 - **Handoffs.** `draftHandoff` has no effect: it only puts an editable draft on the page ([ADR 0003](docs/adr/0003-one-effect-free-tool.md)). Nothing is sent until the Visitor adds an email address and presses Send. That runs checks and a moderation pass, then starts a durable Workflow that emails Nathan with the Visitor as Reply-To ([ADR 0004](docs/adr/0004-mailgun-for-handoff-email.md)). See [`src/worker/handoff.ts`](src/worker/handoff.ts) and [`src/worker/workflow.ts`](src/worker/workflow.ts).
 - **Errors.** Every `console.error` in the Worker, Durable Object and Workflow reports to Sentry, and so do the page's errors. Visitor text and email addresses are kept out: no breadcrumbs, no request or AI payloads, and AI SDK error messages are redacted. Events carry the Conversation ID instead ([`src/worker/sentry.ts`](src/worker/sentry.ts)).
-- **Forgetting.** Each question pushes a Conversation's 30-day timer back. When the timer fires, the Durable Object destroys itself and everything in it.
+- **Forgetting.** Each question pushes a Conversation's 30-day timer back. When the timer fires, the Durable Object destroys itself and everything in it. A Visitor can also start over from the page: the Conversation is forgotten at once and the page switches to a new one.
 
 ## Abuse hardening
 
