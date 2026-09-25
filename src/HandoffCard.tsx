@@ -5,6 +5,8 @@ type Props = {
   id: string;
   /** The model's draft: the Visitor's question as they asked it. Empty when opened from the link. */
   question: string;
+  /** Focus the message on mount: only for a card the Visitor just opened themselves. */
+  autoFocus?: boolean;
   sent: boolean;
   /** True until the Conversation passes Turnstile; then no token is sent. */
   needsToken: boolean;
@@ -15,7 +17,7 @@ type Props = {
 };
 
 /** A Handoff the Visitor can edit and send to Nathan. Nothing is sent until they press Send (ADR 0003). */
-export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed, send }: Props) {
+export function HandoffCard({ id, question, autoFocus, sent, needsToken, token, onTokenUsed, send }: Props) {
   const [message, setMessage] = useState(question);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -52,7 +54,7 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
     >
       <p className="label text-accent">Letter to Nathan</p>
       <p className="font-serif text-lg">
-        {question ? "The profile doesn't cover this. Send it to Nathan?" : "Send a question to Nathan"}{" "}
+        {question ? "The profile doesn't cover this. Send it to Nathan?" : "Send a question to Nathan."}{" "}
         He gets it by email and replies to you directly.
       </p>
       <label className="flex flex-col gap-1">
@@ -63,7 +65,10 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
           maxLength={2000}
           rows={2}
           required
-          className="border-b border-muted bg-transparent py-1.5 font-serif text-lg"
+          // Opened from "Ask Nathan directly", the card can land below the fold on a phone; focusing it scrolls it
+          // into view, clear of the pinned ask bar (scroll-mb), and puts the Visitor where they'll type.
+          autoFocus={autoFocus}
+          className="scroll-mb-56 border-b border-muted bg-transparent py-1.5 font-serif text-lg"
         />
       </label>
       <label className="flex flex-col gap-1">

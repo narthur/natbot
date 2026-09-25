@@ -52,11 +52,12 @@ export function App() {
   const ready = !busy && agent.state !== undefined && (!needsCheck || turnstile.token !== undefined);
   const sentHandoffs = agent.state?.sentHandoffs ?? [];
 
-  const handoffCard = (id: string, question: string) => (
+  const handoffCard = (id: string, question: string, autoFocus = false) => (
     <HandoffCard
       key={id}
       id={id}
       question={question}
+      autoFocus={autoFocus}
       sent={sentHandoffs.includes(id)}
       needsToken={needsCheck}
       token={turnstile.token}
@@ -155,7 +156,7 @@ export function App() {
           {status === "submitted" && <li className="pl-11 font-serif text-muted italic">Thinking…</li>}
           {error && <li className="pl-11 text-accent">{error.message}</li>}
         </ol>
-        {directHandoff && <div className="mt-5">{handoffCard(directHandoff, "")}</div>}
+        {directHandoff && <div className="mt-5">{handoffCard(directHandoff, "", true)}</div>}
         <div ref={endRef} />
 
         <div className="sticky bottom-0 mt-auto bg-paper pt-6 pb-5">
