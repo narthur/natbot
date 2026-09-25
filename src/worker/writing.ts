@@ -200,10 +200,13 @@ export async function hash(post: Post): Promise<string> {
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** The new manifest, with each Post that couldn't be read this run keeping what's indexed for it rather than being deleted. */
-export const keepFailed = (before: Manifest, after: Manifest, failed: string[]): Manifest => ({
+/**
+ * The new manifest, with each Post that couldn't be read this run keeping what's indexed for it rather than being
+ * deleted. A Post is either read or failed, never both; if it were both, this run's entry would win.
+ */
+export const keepFailed = (before: Manifest, indexed: Manifest, failed: string[]): Manifest => ({
   ...Object.fromEntries(failed.flatMap((k) => (before[k] ? [[k, before[k]]] : []))),
-  ...after,
+  ...indexed,
 });
 
 /** Vector ids the old manifest has that the new one doesn't: Posts that were removed or excluded, and chunks a shorter Post no longer has. */
