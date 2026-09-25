@@ -152,8 +152,8 @@ export function App() {
               </div>
             </li>
           ))}
-          {status === "submitted" && <li className="font-serif text-muted italic">Thinking…</li>}
-          {error && <li className="text-accent">{error.message}</li>}
+          {status === "submitted" && <li className="pl-11 font-serif text-muted italic">Thinking…</li>}
+          {error && <li className="pl-11 text-accent">{error.message}</li>}
         </ol>
         {directHandoff && <div className="mt-5">{handoffCard(directHandoff, "")}</div>}
         <div ref={endRef} />
@@ -176,7 +176,7 @@ export function App() {
               onChange={(e) => setInput(e.target.value)}
               maxLength={2000}
               placeholder={messages.length ? "Next question…" : "Your question…"}
-              className="min-h-14 min-w-0 flex-1 bg-transparent font-serif text-xl placeholder:text-muted focus:outline-none lg:text-2xl"
+              className="min-h-14 min-w-0 flex-1 bg-transparent font-serif text-xl placeholder:text-muted lg:text-2xl"
             />
             <button
               type="submit"

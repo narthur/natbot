@@ -4,7 +4,7 @@ import { useRef } from "react";
 const facts = [
   ["Now", "Founder, Pine Peak Digital, 2024–"],
   ["", "Founder, TaskRatchet, 2019–"],
-  ["Before", "Technology Director, AudioVerse"],
+  ["Earlier", "Technology Director, AudioVerse, 2019–2022"],
   ["Stack", "TypeScript, React, Node.js, Cloudflare Workers"],
   ["Based", "Bowling Green, Kentucky"],
   ["Open to", "US and European roles"],

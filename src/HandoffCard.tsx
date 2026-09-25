@@ -63,7 +63,7 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
           maxLength={2000}
           rows={2}
           required
-          className="border-b border-rule bg-transparent py-1.5 font-serif text-lg focus:border-ink focus:outline-none"
+          className="border-b border-muted bg-transparent py-1.5 font-serif text-lg"
         />
       </label>
       <label className="flex flex-col gap-1">
@@ -76,7 +76,7 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
           required
           autoComplete="email"
           placeholder="you@company.com"
-          className="min-h-11 border-b border-ink bg-transparent font-serif text-lg placeholder:text-muted focus:outline-none"
+          className="min-h-11 border-b border-ink bg-transparent font-serif text-lg placeholder:text-muted"
         />
       </label>
       {problem && <p className="text-accent">{problem}</p>}
