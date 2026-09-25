@@ -1,13 +1,14 @@
 import { AIChatAgent, type OnChatMessageOptions } from "@cloudflare/ai-chat";
 import { callable } from "agents";
 import { createWorkersAI } from "workers-ai-provider";
-import { type AnswerDeps, answer, MODEL, type Turn } from "./answer";
+import { type AnswerDeps, answer, MODEL, MODEL_SETTINGS, type Turn } from "./answer";
 import { type Claims, DAILY_HANDOFF_LIMIT, sendHandoff } from "./handoff";
 import { isSafe } from "./moderate";
 import { verifyTurnstile } from "./turnstile";
 
 // Counts attempts, not successful answers: a failed call can still cost tokens.
-// About $2/day for short conversations, up to ~$6/day if every call carries a full window of history (HISTORY_TURNS in answer.ts).
+// About $0.003 per question with a short history (roughly 5k input tokens, mostly the Profile), so at most ~$3-6/day;
+// a question where the model drafts a Handoff can take two model calls (answer.ts).
 const DAILY_ANSWER_LIMIT = 1000;
 // A Conversation is forgotten 30 days after its latest question (CONTEXT.md).
 const FORGET_AFTER_SECONDS = 30 * 24 * 60 * 60;
@@ -52,7 +53,7 @@ export class ChatAgent extends AIChatAgent<Env, ChatState> {
           recent: (limit) => this.recentTurns(limit),
           record: ({ question, answer }) => this.sql`INSERT INTO turns (question, answer) VALUES (${question}, ${answer})`,
         },
-        model: createWorkersAI({ binding: this.env.AI, gateway: { id: "natbot" } })(MODEL),
+        model: createWorkersAI({ binding: this.env.AI, gateway: { id: "natbot" } })(MODEL, MODEL_SETTINGS),
       },
       { turnstileToken: typeof token === "string" ? token : undefined, abortSignal: options?.abortSignal },
     );

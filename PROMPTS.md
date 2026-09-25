@@ -378,3 +378,11 @@ Adversarial evals
 
 CLOUDFLARE_AI_TOKEN added to the repo
 
+## 2026-09-25 08:43:11
+
+Merged. Is the appropriate fix to allow the AI to have multiple turns when it uses tools?
+
+## 2026-09-25 08:44:32
+
+Sure
+

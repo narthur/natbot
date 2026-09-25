@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { createWorkersAI } from "workers-ai-provider";
 import { afterAll, describe, expect, test } from "vitest";
-import { answer, MODEL } from "../src/worker/answer";
+import { answer, MODEL, MODEL_SETTINGS } from "../src/worker/answer";
 import { type Case, cases } from "./cases";
 import { credentials } from "./credentials";
 import { JUDGE_MODEL, judge } from "./judge";
@@ -23,7 +23,8 @@ async function ask(c: Case): Promise<Outcome> {
     human: { verified: () => true, verify: async () => true, markVerified: () => {} },
     spendBudget: async () => true,
     history: { recent: (limit) => turns.slice(-limit), record: () => {} },
-    model: workersai(model),
+    // Another model under test (EVAL_MODEL) gets no settings: they're specific to the production model.
+    model: model === MODEL ? workersai(model, MODEL_SETTINGS) : workersai(model),
   });
   const events = (await res.text())
     .split("\n")

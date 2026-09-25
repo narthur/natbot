@@ -119,18 +119,21 @@ export function App() {
                   : "prose prose-stone max-w-none dark:prose-invert"
               }
             >
-              {m.parts.map((p, i) => {
-                const d = m.role === "assistant" ? draft(p) : undefined;
-                if (d) return handoffCard(d.id, d.question);
-                if (p.type !== "text") return null;
-                return m.role === "user" ? (
-                  <p key={i}>{p.text}</p>
-                ) : (
-                  <Markdown key={i} disallowedElements={["img"]}>
-                    {p.text}
-                  </Markdown>
-                );
-              })}
+              {/* The answer reads first; a draft the model offered goes below it, even if it came first. */}
+              {[...m.parts]
+                .sort((a, b) => Number(Boolean(draft(a))) - Number(Boolean(draft(b))))
+                .map((p, i) => {
+                  const d = m.role === "assistant" ? draft(p) : undefined;
+                  if (d) return handoffCard(d.id, d.question);
+                  if (p.type !== "text") return null;
+                  return m.role === "user" ? (
+                    <p key={i}>{p.text}</p>
+                  ) : (
+                    <Markdown key={i} disallowedElements={["img"]}>
+                      {p.text}
+                    </Markdown>
+                  );
+                })}
             </div>
           </li>
         ))}
