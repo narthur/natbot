@@ -1,8 +1,10 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import agents from "agents/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [react(), cloudflare(), tailwindcss()],
+  // agents() compiles `@callable()` decorators, which Oxc and workerd don't support yet.
+  plugins: [agents(), react(), cloudflare(), tailwindcss()],
 });

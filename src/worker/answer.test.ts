@@ -1,7 +1,7 @@
 import { simulateReadableStream, type UIMessage } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { expect, test, vi } from "vitest";
-import { answer, type AnswerDeps, HISTORY_TURNS, MAX_QUESTION_CHARS, type Turn } from "./answer";
+import { answer, type AnswerDeps, HISTORY_TURNS, MAX_QUESTION_CHARS, OFFERED_HANDOFF, type Turn } from "./answer";
 
 const msg = (role: UIMessage["role"], text: string): UIMessage => ({
   id: crypto.randomUUID(),
@@ -166,4 +166,42 @@ test("a rate-limited Conversation doesn't reach Turnstile", async () => {
   deps.withinRateLimit = async () => false;
   await (await answer([msg("user", "q")], deps, { turnstileToken: "tok" })).text();
   expect(human.verify).not.toHaveBeenCalled();
+});
+
+test("the model can offer a draft Handoff, which reaches the page as a tool part", async () => {
+  const model = new MockLanguageModelV4({
+    doStream: async () => ({
+      stream: simulateReadableStream({
+        chunks: [
+          { type: "text-start" as const, id: "t" },
+          { type: "text-delta" as const, id: "t", delta: "The profile doesn't say." },
+          { type: "text-end" as const, id: "t" },
+          { type: "tool-call" as const, toolCallId: "call1", toolName: "draftHandoff", input: '{"question":"Kafka?"}' },
+          { type: "finish" as const, finishReason: { unified: "tool-calls" as const, raw: "tool_calls" }, usage },
+        ],
+      }),
+    }),
+  });
+  const { deps, turns } = setup({ model });
+  const body = await (await answer([msg("user", "Kafka?")], deps)).text();
+  expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't say." }]);
+  expect(model.doStreamCalls[0].tools?.map((t) => t.name)).toEqual(["draftHandoff"]);
+  expect(body).toContain('"toolName":"draftHandoff"');
+  expect(body).toContain('"output":{"drafted":true}');
+});
+
+test("a draft offered without any text is still recorded, so history shows the question", async () => {
+  const model = new MockLanguageModelV4({
+    doStream: async () => ({
+      stream: simulateReadableStream({
+        chunks: [
+          { type: "tool-call" as const, toolCallId: "call1", toolName: "draftHandoff", input: '{"question":"Kafka?"}' },
+          { type: "finish" as const, finishReason: { unified: "tool-calls" as const, raw: "tool_calls" }, usage },
+        ],
+      }),
+    }),
+  });
+  const { deps, turns } = setup({ model });
+  await (await answer([msg("user", "Kafka?")], deps)).text();
+  expect(turns).toEqual([{ question: "Kafka?", answer: OFFERED_HANDOFF }]);
 });

@@ -17,7 +17,7 @@ One Visitor's ongoing exchange with the bot, resumed when they return from the s
 _Avoid_: session, chat, thread
 
 **Handoff**:
-A question the Profile can't answer, which the Visitor chooses to pass to Nathan, optionally with a way to reach them.
+A question the Visitor chooses to pass to Nathan, usually one the Profile can't answer, sent with their email address so he can reply.
 _Avoid_: lead, ticket, escalation, unanswered question
 
 **Proposal**:

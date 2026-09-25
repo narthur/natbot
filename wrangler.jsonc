@@ -17,6 +17,9 @@
       { "name": "Budget", "class_name": "Budget" }
     ]
   },
+  "workflows": [{ "name": "natbot-handoff", "binding": "HANDOFF_WORKFLOW", "class_name": "HandoffWorkflow" }],
+  // Secrets: TURNSTILE_SECRET_KEY, MAILGUN_API_KEY (domain-scoped to mail.nathanarthur.com, ADR 0004).
+  "vars": { "HANDOFF_TO": "nathan@nathanarthur.com" },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatAgent", "Budget"] }],
   // Limits are per Cloudflare location, so they bound bursts rather than exact totals; Budget is the hard daily cap.
   "ratelimits": [

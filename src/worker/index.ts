@@ -3,6 +3,7 @@ import { CONVERSATION_PATH } from "./conversation-path";
 
 export { Budget } from "./budget";
 export { ChatAgent } from "./chat";
+export { HandoffWorkflow } from "./workflow";
 
 export default {
   async fetch(request, env) {
