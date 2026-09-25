@@ -9,6 +9,7 @@ on:
       - profile.md
       - src/worker/answer.ts
       - src/worker/prompt.ts
+      - src/worker/writing.ts
       - patches/**
       - evals/**
       - package.json

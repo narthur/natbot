@@ -435,3 +435,71 @@ I checked on phone, The Ask Nathan directly link works and the card fits, but it
 ## 2026-09-25 12:54:24
 
 Merged. What's next?
+
+## 2026-09-25 12:57:14
+
+Already submitted. Create a pr for 16. Drive to mergable.
+## 2026-09-25 13:09:55
+
+Will this need two sentry projects? natbot-web and natbot-worker?
+
+## 2026-09-25 13:18:19
+
+I think we should also create a pr that documents either in the readme or in something liked to from the readme all the other scaffolding around my process building this that doesn't immediately show up in PROMPTS.md. For example, the review-loop skill and associated guard.
+
+## 2026-09-25 13:55:39
+
+Ok. Create a pr for https://github.com/narthur/natbot/issues/14 and drive to mergable
+
+## 2026-09-25 14:00:01
+
+Mm, yeah. What's the story around the gh token lifecycle? Is that something that's going to have to be periodically cycled?
+
+## 2026-09-25 14:03:11
+
+Let's stop and think this through. Is there a way that this could work without a github token at all? Or via a token provisioned by github actions on each run? Is this where we should consider bringing in a vector store, maybe populating it during ci?
+
+## 2026-09-25 14:05:57
+
+I'm conflicted on the shallow clone. I find that the rich history of a full git clone allows AI to answer many more questions with more insight.
+
+## 2026-09-25 14:07:44
+
+Hmm good points. Let's record all this on the issue and table it for now.
+
+## 2026-09-25 14:14:25
+
+Differnet idea. I'd like to include access to my writing accross my newsletter and my posts to Beeminder blog in this. I'd still be interested in exploring using a vector store, since this is a portfolio piece more than anything, so we can err on the side of adding tech if it's a genuine value add even if the value is small.
+
+## 2026-09-25 14:17:27
+
+agree, and perhaps make references it uses displayed to the user deterministically rather than relying on the model to consistently self-report
+
+## 2026-09-25 14:18:43
+
+agree, and prepopulate the ignore list with things that are more personal or not work related in some way
+
+## 2026-09-25 14:22:06
+
+agree
+
+## 2026-09-25 14:22:43
+
+agree
+
+## 2026-09-25 14:24:22
+
+sounds good
+
+## 2026-09-25 14:26:17
+
+yes, create pr and drive to mergable
+
+## 2026-09-25 15:48:52
+
+Now you say drafting goes down. That's not necessarily bad. If it's going down because relevant material was found in the search, then reducing drafting is the correct outcome.
+
+## 2026-09-25 15:49:44
+
+Did you figure out why the drop? If it's also not doing a search, just search existing causing the drop feels weird.
+

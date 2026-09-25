@@ -17,7 +17,16 @@
       { "name": "Budget", "class_name": "Budget" }
     ]
   },
-  "workflows": [{ "name": "natbot-handoff", "binding": "HANDOFF_WORKFLOW", "class_name": "HandoffWorkflow" }],
+  "workflows": [
+    { "name": "natbot-handoff", "binding": "HANDOFF_WORKFLOW", "class_name": "HandoffWorkflow" },
+    { "name": "natbot-index", "binding": "INDEX_WORKFLOW", "class_name": "WritingIndexWorkflow" }
+  ],
+  // Nathan's writing (issue #28): Qwen3 embeddings (1024 dimensions, cosine). Vectorize has no local simulator.
+  "vectorize": [{ "binding": "WRITING", "index_name": "natbot-writing", "remote": true }],
+  // What the writing index holds, so a run re-embeds only changed Posts and can delete removed ones.
+  "kv_namespaces": [{ "binding": "WRITING_INDEX", "id": "689fa8acc8264adbaac3dd1c2948e78a" }],
+  // Re-indexes the writing daily.
+  "triggers": { "crons": ["17 9 * * *"] },
   // Secrets: TURNSTILE_SECRET_KEY, MAILGUN_API_KEY (domain-scoped to mail.nathanarthur.com, ADR 0004).
   // SENTRY_DSN (natbot-worker) only lets you send events, so it isn't a secret.
   "vars": {

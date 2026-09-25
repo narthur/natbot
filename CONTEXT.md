@@ -20,6 +20,10 @@ _Avoid_: session, chat, thread
 A question the Visitor chooses to pass to Nathan, usually one the Profile can't answer, sent with their email address so he can reply.
 _Avoid_: lead, ticket, escalation, unanswered question
 
+**Post**:
+A piece of Nathan's published writing (a newsletter issue or a Beeminder blog post) that the bot can search and quote, always attributed and dated. It ranks below the Profile, and a post never stands as a current fact about Nathan.
+_Avoid_: article, document, source
+
 **Proposal**:
 A suggested addition to the Profile, made from Nathan's answer to a Handoff, that stays out of the Profile until Nathan approves it.
 _Avoid_: draft, suggestion, pending edit

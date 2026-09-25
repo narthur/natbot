@@ -7,6 +7,7 @@ import { About } from "./About";
 import { HandoffCard } from "./HandoffCard";
 import { useTurnstile } from "./turnstile";
 import type { ChatAgentClass, ChatState } from "./worker/chat";
+import type { Hit } from "./worker/writing";
 
 const starterQuestions = [
   "What has Nathan built?",
@@ -34,8 +35,24 @@ const draft = (p: Part) =>
     ? { id: p.toolCallId, question: (p.input as { question?: string } | undefined)?.question ?? "" }
     : undefined;
 
+/**
+ * The posts a search of Nathan's writing returned, once per post. Listed from the tool's result, not the model's
+ * text, so the Visitor sees what was searched whether or not the answer cites it (issue #28).
+ */
+const searched = (p: Part): Hit[] | "unavailable" | undefined => {
+  if (p.type !== "tool-searchWriting" || !("state" in p) || p.state !== "output-available") return undefined;
+  if (!Array.isArray(p.output)) return "unavailable";
+  // Only https links: the URLs come from the feeds, which this page doesn't control.
+  const hits = (p.output as Hit[]).filter((h) => h.url?.startsWith("https://"));
+  return [...new Map(hits.map((h) => [h.url, h])).values()];
+};
+
+/** Display order within an answer: the text, then the posts it searched, then a draft. */
+const rank = (p: Part) => (draft(p) ? 2 : searched(p) ? 1 : 0);
+
 /** Failed turns can leave assistant messages with nothing to show. */
-const hasContent = (m: UIMessage) => m.parts.some((p) => (p.type === "text" && p.text.trim()) || draft(p));
+const hasContent = (m: UIMessage) =>
+  m.parts.some((p) => (p.type === "text" && p.text.trim()) || draft(p) || (m.role === "assistant" && searched(p)));
 
 export function App() {
   const [name] = useState(conversationId);
@@ -135,12 +152,36 @@ export function App() {
                     : "prose prose-lg max-w-none font-serif text-body prose-a:text-accent"
                 }
               >
-                {/* The answer reads first; a draft the model offered goes below it, even if it came first. */}
+                {/* The answer reads first, whatever order the model's steps came in. */}
                 {[...m.parts]
-                  .sort((a, b) => Number(Boolean(draft(a))) - Number(Boolean(draft(b))))
+                  .sort((a, b) => rank(a) - rank(b))
                   .map((p, i) => {
                     const d = m.role === "assistant" ? draft(p) : undefined;
                     if (d) return handoffCard(d.id, d.question);
+                    const posts = m.role === "assistant" ? searched(p) : undefined;
+                    if (posts) {
+                      return (
+                        <div key={i} className="not-prose font-sans text-sm text-muted">
+                          <p className="label">Searched Nathan's writing</p>
+                          {posts === "unavailable" ? (
+                            <p className="mt-1">His writing couldn't be searched just now.</p>
+                          ) : posts.length ? (
+                            <ul className="mt-1">
+                              {posts.map((h) => (
+                                <li key={h.url}>
+                                  <a className="text-accent underline" href={h.url} target="_blank" rel="noreferrer">
+                                    {h.title}
+                                  </a>{" "}
+                                  ({h.source === "beeminder" ? "Beeminder blog" : "newsletter"}, {h.date})
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-1">Nothing relevant found.</p>
+                          )}
+                        </div>
+                      );
+                    }
                     if (p.type !== "text") return null;
                     return m.role === "user" ? (
                       <p key={i}>{p.text}</p>
@@ -191,8 +232,8 @@ export function App() {
             Answers come only from Nathan's{" "}
             <a className="text-accent underline" href="https://github.com/narthur/natbot/blob/main/profile.md">
               public profile
-            </a>
-            , and Nathan may read these conversations to improve the assistant.{" "}
+            </a>{" "}
+            and his published writing, and Nathan may read these conversations to improve the assistant.{" "}
             <button
               type="button"
               onClick={() => setDirectHandoff(crypto.randomUUID())}

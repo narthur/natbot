@@ -2,6 +2,16 @@ import { writeFileSync } from "node:fs";
 import { createWorkersAI } from "workers-ai-provider";
 import { afterAll, describe, expect, test } from "vitest";
 import { answer, MODEL, MODEL_SETTINGS } from "../src/worker/answer";
+import {
+  chunk,
+  EMBEDDING_MODEL,
+  embedChunks,
+  fetchPosts,
+  type Hit,
+  inMemoryNearest,
+  type Nearest,
+  searchWriting,
+} from "../src/worker/writing";
 import { type Case, cases } from "./cases";
 import { credentials } from "./credentials";
 import { JUDGE_MODEL, judge } from "./judge";
@@ -11,7 +21,19 @@ const model = process.env.EVAL_MODEL ?? MODEL;
 const runs = Number(process.env.EVAL_RUNS ?? 1);
 const workersai = createWorkersAI(credentials());
 
-type Outcome = { text: string; drafts: string[] };
+const embedder = workersai.textEmbedding(EMBEDDING_MODEL);
+/**
+ * The writing index, built in memory from the live posts with production's chunking and embeddings, so the eval
+ * needs no Vectorize access. Built once, on the first search.
+ */
+let index: Promise<Nearest> | undefined;
+const writingIndex = () =>
+  (index ??= (async () => {
+    const chunks = (await fetchPosts()).posts.flatMap(chunk);
+    return inMemoryNearest(chunks, await embedChunks(embedder, chunks));
+  })());
+
+type Outcome = { text: string; drafts: string[]; searched: Hit[] };
 type Result = { case: Case; run: number; outcome: Outcome; failures: string[] };
 const results: Result[] = [];
 
@@ -23,6 +45,7 @@ async function ask(c: Case): Promise<Outcome> {
     human: { verified: () => true, verify: async () => true, markVerified: () => {} },
     spendBudget: async () => true,
     history: { recent: (limit) => turns.slice(-limit), record: () => {} },
+    searchWriting: async (query) => searchWriting(query, embedder, await writingIndex()),
     // Another model under test (EVAL_MODEL) gets no settings: they're specific to the production model.
     model: model === MODEL ? workersai(model, MODEL_SETTINGS) : workersai(model),
   });
@@ -32,6 +55,10 @@ async function ask(c: Case): Promise<Outcome> {
     .map((line) => JSON.parse(line.slice("data: ".length)));
   const error = events.find((e) => e.type === "error");
   if (error) throw new Error(`answer stream failed: ${error.errorText}`);
+  // Output events carry only the call's id, so match them to the search calls.
+  const searchIds = new Set(
+    events.filter((e) => e.type === "tool-input-available" && e.toolName === "searchWriting").map((e) => e.toolCallId),
+  );
   return {
     text: events
       .filter((e) => e.type === "text-delta")
@@ -40,10 +67,13 @@ async function ask(c: Case): Promise<Outcome> {
     drafts: events
       .filter((e) => e.type === "tool-input-available" && e.toolName === "draftHandoff")
       .map((e) => String(e.input?.question ?? "")),
+    searched: events
+      .filter((e) => e.type === "tool-output-available" && searchIds.has(e.toolCallId) && Array.isArray(e.output))
+      .flatMap((e) => e.output as Hit[]),
   };
 }
 
-async function grade(c: Case, { text, drafts }: Outcome): Promise<string[]> {
+async function grade(c: Case, { text, drafts, searched }: Outcome): Promise<string[]> {
   const { draft, draftNot = [], not = [], judge: rubric } = c.expect;
   const failures = [
     ...(draft === true && drafts.length === 0 ? ["expected a draft Handoff, got none"] : []),
@@ -52,7 +82,7 @@ async function grade(c: Case, { text, drafts }: Outcome): Promise<string[]> {
     ...not.filter((p) => p.test(text)).map((p) => `answer matches ${p}`),
   ];
   if (!rubric) return failures;
-  const verdict = await judge(workersai(JUDGE_MODEL), { question: c.question, answer: text, drafted: drafts[0], rubric });
+  const verdict = await judge(workersai(JUDGE_MODEL), { question: c.question, answer: text, drafted: drafts[0], searched, rubric });
   return verdict.pass ? failures : [...failures, `judge: ${verdict.reason}`];
 }
 
@@ -61,7 +91,7 @@ describe.each([...new Set(cases.map((c) => c.category))])("%s", (category) => {
     cases.filter((c) => c.category === category).flatMap((c) => Array.from({ length: runs }, (_, run) => ({ c, run }))),
   )("$c.id (run $run)", async ({ c, run }) => {
     // A run that errors (the model or the judge) still lands in the report, as a failure.
-    const empty: Outcome = { text: "", drafts: [] };
+    const empty: Outcome = { text: "", drafts: [], searched: [] };
     const outcome = await ask(c).catch((error) => ({ ...empty, error: String(error) }));
     const failures =
       "error" in outcome ? [`error: ${outcome.error}`] : await grade(c, outcome).catch((error) => [`judge error: ${error}`]);

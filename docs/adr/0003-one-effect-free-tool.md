@@ -6,3 +6,12 @@ Under Meta's "Rule of Two" (as covered in [Christopher Moravec's episode 59](htt
 
 - Handoff text is written by the Visitor and must stay untrusted all the way through: the notification is sent as plain text, and no agent acts on the contents of a Proposal PR.
 - Any new tool has to be checked against the Rule of Two before it's added.
+
+## Update (2026-09-25)
+
+The model now has a second tool, `searchWriting` (ADR 0006). It passes the Rule of Two:
+
+- it reads only Nathan's published writing, which is public
+- it takes no action
+
+Its passages are untrusted input, like a Visitor's message: the model treats them as data, never instructions. `draftHandoff` is still the only way anything leaves the system, and it still needs the Visitor to press Send.
