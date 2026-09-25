@@ -4,3 +4,5 @@ dist
 .code-analysis
 *.tsbuildinfo
 .dev.vars
+evals/report.md
+evals/results.json

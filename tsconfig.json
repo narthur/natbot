@@ -11,5 +11,5 @@
     // Worker runtime types come from `wrangler types` (src/worker/env.d.ts).
     "types": ["node", "vite/client"]
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts", "*.test.ts"]
+  "include": ["src", "evals", "vite.config.ts", "vitest.config.ts", "vitest.eval.config.ts", "*.test.ts"]
 }
