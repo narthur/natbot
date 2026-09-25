@@ -428,3 +428,10 @@ Ok. What's next?
 
 Sure, we can do 1. I think I already did 2. And 3 is partially done, haven't looked at it on a phone.
 
+## 2026-09-25 12:43:40
+
+I checked on phone, The Ask Nathan directly link works and the card fits, but it can open without scrolling to it, at which point it can appear to have done nothing
+
+## 2026-09-25 12:54:24
+
+Merged. What's next?
