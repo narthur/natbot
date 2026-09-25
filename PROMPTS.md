@@ -358,3 +358,7 @@ agree
 
 proceed
 
+## 2026-09-24 17:58:10
+
+We should create a follow-up issue to add sentry
+
