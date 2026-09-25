@@ -7,6 +7,7 @@ import {
   streamText,
   tool,
   type UIMessage,
+  type UIMessageStreamWriter,
 } from "ai";
 import { z } from "zod";
 import { SYSTEM_PROMPT } from "./prompt";
@@ -58,6 +59,9 @@ const searchWriting = (search: AnswerDeps["searchWriting"]) =>
 
 /** What a search that failed returns, so neither the model nor the page mistakes an outage for no matches. */
 export const SEARCH_UNAVAILABLE = { unavailable: "Nathan's writing can't be searched right now." } as const;
+
+/** Said when the model stops without writing an answer or offering a draft, so the Visitor isn't left with nothing. */
+export const UNFINISHED = "Sorry, I couldn't finish that answer. Please try asking again, or use Ask Nathan directly below.";
 
 export const OFFERED_HANDOFF = "The profile doesn't answer this, so I offered to send the question to Nathan.";
 
@@ -121,12 +125,14 @@ export async function answer(
     messages: modelMessages(deps.history.recent(HISTORY_TURNS), question),
     tools: { draftHandoff, searchWriting: searchWriting(deps.searchWriting) },
     // After a tool call the model gets another step; without one, a turn that opens with a draft ends with only
-    // a card. The last step, and any step after a draft (one draft per question), can only write text.
+    // a card. The last step, and any step after a draft (one draft per question), can only write text. One search
+    // per question too: after two, the text-only last step sometimes wrote nothing at all.
     stopWhen: stepCountIs(MAX_STEPS),
-    prepareStep: ({ stepNumber, steps }) =>
-      stepNumber === MAX_STEPS - 1 || steps.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"))
-        ? { activeTools: [] }
-        : undefined,
+    prepareStep: ({ stepNumber, steps }) => {
+      const called = (name: string) => steps.some((s) => s.toolCalls.some((c) => c.toolName === name));
+      if (stepNumber === MAX_STEPS - 1 || called("draftHandoff")) return { activeTools: [] };
+      return called("searchWriting") ? { activeTools: ["draftHandoff"] } : undefined;
+    },
     maxOutputTokens: 600,
     // One accepted question spends one Budget slot, so keep retries from multiplying the real calls behind it.
     maxRetries: 1,
@@ -141,13 +147,27 @@ export async function answer(
       if (recorded) deps.history.record({ question, answer: recorded });
     },
   });
-  // The default hides error details from the client; this gives the visitor something to act on.
-  return result.toUIMessageStreamResponse({
-    onError: (error) => {
-      console.error("chat stream error", error);
-      return "Sorry, something went wrong. Please try again.";
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      // Relayed chunk by chunk, so a fallback can follow the model's last word and precede the finish.
+      for await (const chunk of result.toUIMessageStream({
+        sendFinish: false,
+        // The default hides error details from the client; this gives the visitor something to act on.
+        onError: (error) => {
+          console.error("chat stream error", error);
+          return "Sorry, something went wrong. Please try again.";
+        },
+      })) {
+        writer.write(chunk);
+      }
+      const steps = await Promise.resolve(result.steps).catch(() => undefined);
+      const last = steps?.at(-1);
+      const drafted = steps?.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"));
+      if (last && !last.text.trim() && !last.toolCalls.length && !drafted) notice(writer, UNFINISHED);
+      writer.write({ type: "finish" });
     },
   });
+  return createUIMessageStreamResponse({ stream });
 }
 
 /** The visitor's latest message as plain text, or null if there isn't one. */
@@ -175,14 +195,14 @@ function modelMessages(turns: Turn[], question: string): ModelMessage[] {
   ];
 }
 
+/** Writes a fixed piece of text into an answer. */
+function notice(writer: UIMessageStreamWriter, text: string) {
+  writer.write({ type: "text-start", id: "notice" });
+  writer.write({ type: "text-delta", id: "notice", delta: text });
+  writer.write({ type: "text-end", id: "notice" });
+}
+
 /** A fixed assistant message, sent without calling the model. */
 function reply(text: string) {
-  const stream = createUIMessageStream({
-    execute: ({ writer }) => {
-      writer.write({ type: "text-start", id: "notice" });
-      writer.write({ type: "text-delta", id: "notice", delta: text });
-      writer.write({ type: "text-end", id: "notice" });
-    },
-  });
-  return createUIMessageStreamResponse({ stream });
+  return createUIMessageStreamResponse({ stream: createUIMessageStream({ execute: ({ writer }) => notice(writer, text) }) });
 }
