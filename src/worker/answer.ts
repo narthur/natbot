@@ -164,7 +164,7 @@ export async function answer(
       const last = steps?.at(-1);
       const drafted = steps?.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"));
       // Only a clean stop: an error or an abort has already told the Visitor what happened.
-      if (last?.finishReason === "stop" && !abortSignal?.aborted && !last.text.trim() && !last.toolCalls.length && !drafted) {
+      if (last && last.finishReason !== "error" && !abortSignal?.aborted && !last.text.trim() && !last.toolCalls.length && !drafted) {
         console.warn("model stopped without an answer");
         notice(writer, UNFINISHED);
       }
