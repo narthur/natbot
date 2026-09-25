@@ -112,11 +112,11 @@ test("an exhausted budget stops the model call", async () => {
   expect(console.warn).toHaveBeenCalledWith("daily answer budget exhausted");
 });
 
-test("an empty answer is not recorded, and the Visitor is told it couldn't be finished", async () => {
+test("an empty answer tells the Visitor it couldn't be finished, and history records the same", async () => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   const { deps, turns } = setup({ model: modelSaying("") });
   expect(await (await answer([msg("user", "q")], deps)).text()).toContain(UNFINISHED);
-  expect(turns).toEqual([]);
+  expect(turns).toEqual([{ question: "q", answer: UNFINISHED }]);
 });
 
 test("a failed model call shows the visitor an apology and records nothing", async () => {
@@ -283,7 +283,7 @@ test("a search followed by no answer and no draft gets the fallback, after what 
   const body = await (await answer([msg("user", "Recent thoughts?")], deps)).text();
   expect(body.indexOf(UNFINISHED)).toBeGreaterThan(body.indexOf("Let me check his posts."));
   expect(body.indexOf(UNFINISHED)).toBeLessThan(body.lastIndexOf('"type":"finish"'));
-  expect(turns).toEqual([{ question: "Recent thoughts?", answer: "Let me check his posts." }]);
+  expect(turns).toEqual([{ question: "Recent thoughts?", answer: `Let me check his posts.\n\n${UNFINISHED}` }]);
   expect(warn).toHaveBeenCalledWith("model stopped without an answer");
 });
 

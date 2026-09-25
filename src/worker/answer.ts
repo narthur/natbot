@@ -138,10 +138,10 @@ export async function answer(
     maxRetries: 1,
     abortSignal,
     onFinish: ({ steps }) => {
-      // `text` would be only the last step's, so join every step's. If the model offered a draft without writing
-      // anything, record that, so history and Handoff emails still show the question. A truly empty answer would
-      // be replayed as history, so skip it.
-      const text = steps.map((s) => s.text.trim()).filter(Boolean).join("\n\n");
+      // `text` would be only the last step's, so join every step's, plus the fallback the Visitor saw, so a
+      // preamble like "Let me check his posts." isn't replayed as a finished answer. If the model offered a draft
+      // without writing anything, record that, so history and Handoff emails still show the question.
+      const text = [...steps.map((s) => s.text.trim()), unfinished(steps) ? UNFINISHED : ""].filter(Boolean).join("\n\n");
       const offered = steps.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"));
       const recorded = text || (offered ? OFFERED_HANDOFF : "");
       if (recorded) deps.history.record({ question, answer: recorded });
@@ -161,14 +161,12 @@ export async function answer(
         writer.write(chunk);
       }
       const steps = await Promise.resolve(result.steps).catch(() => undefined);
-      const last = steps?.at(-1);
-      const drafted = steps?.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"));
-      // Not after an error or an abort: those have already told the Visitor what happened.
-      if (last && last.finishReason !== "error" && !abortSignal?.aborted && !last.text.trim() && !last.toolCalls.length && !drafted) {
+      // Not after an abort: the Visitor stopped it.
+      if (steps && !abortSignal?.aborted && unfinished(steps)) {
         console.warn("model stopped without an answer");
         notice(writer, UNFINISHED);
       }
-      writer.write({ type: "finish", finishReason: last?.finishReason });
+      writer.write({ type: "finish", finishReason: steps?.at(-1)?.finishReason });
     },
   });
   return createUIMessageStreamResponse({ stream });
@@ -197,6 +195,23 @@ function modelMessages(turns: Turn[], question: string): ModelMessage[] {
     ]),
     { role: "user", content: question },
   ];
+}
+
+type Step = { text: string; finishReason: string; toolCalls: { toolName: string }[] };
+
+/**
+ * Whether the model stopped without an answer: its last step wrote nothing and called nothing, and it offered no
+ * draft (whose card answers for itself). Not after an error, which has already told the Visitor what happened.
+ */
+function unfinished(steps: Step[]): boolean {
+  const last = steps.at(-1);
+  return (
+    !!last &&
+    last.finishReason !== "error" &&
+    !last.text.trim() &&
+    !last.toolCalls.length &&
+    !steps.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"))
+  );
 }
 
 /** Writes a fixed piece of text into an answer. */
