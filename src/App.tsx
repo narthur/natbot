@@ -18,14 +18,19 @@ const starterQuestions = [
 /** One Conversation per browser: a random ID kept in localStorage, so a returning visitor resumes it. */
 function conversationId(): string {
   try {
-    const saved = localStorage.getItem("conversation");
-    if (saved) return saved;
-    const id = crypto.randomUUID();
-    localStorage.setItem("conversation", id);
-    return id;
+    return localStorage.getItem("conversation") ?? newConversationId();
   } catch {
     return crypto.randomUUID();
   }
+}
+
+/** A fresh Conversation ID, remembered for next time. */
+function newConversationId(): string {
+  const id = crypto.randomUUID();
+  try {
+    localStorage.setItem("conversation", id);
+  } catch {}
+  return id;
 }
 
 type Part = UIMessage["parts"][number];
@@ -54,8 +59,13 @@ const rank = (p: Part) => (draft(p) ? 2 : searched(p) ? 1 : 0);
 const hasContent = (m: UIMessage) =>
   m.parts.some((p) => (p.type === "text" && p.text.trim()) || draft(p) || (m.role === "assistant" && searched(p)));
 
+/** Starting over switches to a fresh Conversation; the key remounts the chat, so nothing of the old one stays on the page. */
 export function App() {
-  const [name] = useState(conversationId);
+  const [name, setName] = useState(conversationId);
+  return <Chat key={name} name={name} onStartOver={() => setName(newConversationId())} />;
+}
+
+function Chat({ name, onStartOver }: { name: string; onStartOver: () => void }) {
   const agent = useAgent<ChatAgentClass, ChatState>({ agent: "ChatAgent", name });
   const { messages, sendMessage, status, error } = useAgentChat({ agent });
   const [input, setInput] = useState("");
@@ -97,6 +107,13 @@ export function App() {
     );
     if (needsCheck) turnstile.reset();
     setInput("");
+  }
+
+  async function startOver() {
+    if (!window.confirm("Start over? This conversation will be deleted.")) return;
+    // If this fails (say, offline), the old Conversation is still forgotten 30 days after its last question.
+    await agent.call("startOver").catch(() => {});
+    onStartOver();
   }
 
   function onSubmit(e: FormEvent) {
@@ -242,6 +259,14 @@ export function App() {
             >
               Ask Nathan directly
             </button>
+            {messages.length > 0 && (
+              <>
+                {" · "}
+                <button type="button" onClick={startOver} disabled={busy} className="text-accent underline">
+                  Start over
+                </button>
+              </>
+            )}
           </p>
         </div>
       </main>
