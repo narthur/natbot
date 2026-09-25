@@ -4,6 +4,8 @@ export const MAX_HANDOFF_CHARS = 2000;
 export const HANDOFFS_PER_CONVERSATION = 3;
 export const DAILY_HANDOFF_LIMIT = 20;
 export const HANDOFF_TURNS = 5;
+// A claim that hasn't confirmed by now was abandoned (the Durable Object was evicted mid-send), so it's reclaimable.
+export const STALE_CLAIM_MS = 5 * 60 * 1000;
 // One plain address: no whitespace or header punctuation, so it's safe as a Reply-To value.
 const EMAIL = /^[^\s@<>,;:"()[\]\\]+@[^\s@<>,;:"()[\]\\]+\.[^\s@<>,;:"()[\]\\]+$/;
 
@@ -12,11 +14,14 @@ export type HandoffParams = { conversation: string; message: string; email: stri
 
 export type HandoffResult = { sent: true } | { sent: false; reason: string };
 
+/** A Handoff id this Conversation has sent, or started sending at `at` (ms). */
+export type Claims = Record<string, { sent: boolean; at: number }>;
+
 export type HandoffDeps = {
   human: AnswerDeps["human"];
-  /** Handoff ids this Conversation has claimed: sent, or being sent right now. Must be synchronous. */
-  claimed: () => string[];
-  setClaimed: (ids: string[]) => void;
+  /** This Conversation's Handoff claims. Both must be synchronous, so claiming can't be interleaved. */
+  claims: () => Claims;
+  setClaims: (claims: Claims) => void;
   /** Tells the page a Handoff was sent. */
   confirm: (id: string) => void;
   /** Claims one of today's Handoff emails; false when none are left. */
@@ -47,17 +52,34 @@ export async function sendHandoff(request: unknown, deps: HandoffDeps): Promise<
 
   // Claim the slot before the first await. The Durable Object can interleave calls at any await, so checking
   // here but recording only after sending would let a double-click send twice, or two cards pass the cap.
-  const claimed = deps.claimed();
-  if (claimed.includes(id)) return { sent: true };
-  if (claimed.length >= HANDOFFS_PER_CONVERSATION) {
+  const now = deps.now().getTime();
+  const live: Claims = Object.fromEntries(
+    Object.entries(deps.claims()).filter(([, c]) => c.sent || now - c.at < STALE_CLAIM_MS),
+  );
+  if (live[id]?.sent) return { sent: true };
+  if (live[id]) return refuse("That message is still sending.");
+  if (Object.keys(live).length >= HANDOFFS_PER_CONVERSATION) {
     return refuse("This conversation has already sent Nathan several messages. Please email him directly.");
   }
-  deps.setClaimed([...claimed, id]);
+  deps.setClaims({ ...live, [id]: { sent: false, at: now } });
 
-  const result = await deliver({ text, email, turnstileToken }, deps);
-  if (result.sent) deps.confirm(id);
-  else deps.setClaimed(deps.claimed().filter((c) => c !== id));
-  return result;
+  // Anything short of a confirmed send releases the claim, including an unexpected throw.
+  const release = () => {
+    const { [id]: _released, ...rest } = deps.claims();
+    deps.setClaims(rest);
+  };
+  try {
+    const result = await deliver({ text, email, turnstileToken }, deps);
+    if (!result.sent) release();
+    else {
+      deps.setClaims({ ...deps.claims(), [id]: { sent: true, at: now } });
+      deps.confirm(id);
+    }
+    return result;
+  } catch (error) {
+    release();
+    throw error;
+  }
 }
 
 async function deliver(
@@ -71,7 +93,7 @@ async function deliver(
     deps.human.markVerified();
   }
 
-  // Like the answer Budget, this caps attempts: a message moderation blocks has still used a slot.
+  // Like the answer Budget, this caps attempts: a message that moderation blocks has still used a slot.
   const withinDaily = await deps.spendDaily().catch((error) => {
     console.error("handoff daily limit check failed", error);
     return undefined;

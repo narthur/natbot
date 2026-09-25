@@ -2,7 +2,7 @@ import { AIChatAgent, type OnChatMessageOptions } from "@cloudflare/ai-chat";
 import { callable } from "agents";
 import { createWorkersAI } from "workers-ai-provider";
 import { type AnswerDeps, answer, type Turn } from "./answer";
-import { DAILY_HANDOFF_LIMIT, sendHandoff } from "./handoff";
+import { type Claims, DAILY_HANDOFF_LIMIT, sendHandoff } from "./handoff";
 import { isSafe } from "./moderate";
 import { verifyTurnstile } from "./turnstile";
 
@@ -64,8 +64,8 @@ export class ChatAgent extends AIChatAgent<Env, ChatState> {
   async sendHandoff(request: unknown) {
     return sendHandoff(request, {
       human: this.human(),
-      claimed: () => this.ctx.storage.kv.get<string[]>("handoffs") ?? [],
-      setClaimed: (ids) => this.ctx.storage.kv.put("handoffs", ids),
+      claims: () => this.ctx.storage.kv.get<Claims>("handoffs") ?? {},
+      setClaims: (claims) => this.ctx.storage.kv.put("handoffs", claims),
       confirm: (id) => this.setState({ ...this.state, sentHandoffs: [...(this.state.sentHandoffs ?? []), id] }),
       spendDaily: () => this.env.Budget.getByName("handoffs").spend(DAILY_HANDOFF_LIMIT),
       isSafe: (text) => isSafe(this.env.AI, text),

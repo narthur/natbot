@@ -1,19 +1,27 @@
 import { expect, test, vi } from "vitest";
 import type { Turn } from "./answer";
-import { DAILY_HANDOFF_LIMIT, HANDOFF_TURNS, type HandoffDeps, HANDOFFS_PER_CONVERSATION, sendHandoff } from "./handoff";
+import {
+  type Claims,
+  DAILY_HANDOFF_LIMIT,
+  HANDOFF_TURNS,
+  type HandoffDeps,
+  HANDOFFS_PER_CONVERSATION,
+  STALE_CLAIM_MS,
+  sendHandoff,
+} from "./handoff";
 
 const request = { id: "h1", message: "  Has he used Kafka?  ", email: "recruiter@example.com", turnstileToken: "tok" };
 const turns: Turn[] = [{ question: "q", answer: "a" }];
 
 /** A verified Conversation with nothing sent, a daily budget left, and a safe message. Override any part. */
-function setup(overrides: Partial<HandoffDeps> = {}) {
-  let claimed: string[] = [];
+function setup(overrides: Partial<HandoffDeps> = {}, initial: Claims = {}) {
+  let claims = initial;
   const sent: string[] = [];
   const deps: HandoffDeps = {
     human: { verified: () => true, verify: vi.fn(async () => true), markVerified: vi.fn() },
-    claimed: () => claimed,
-    setClaimed: (ids) => {
-      claimed = ids;
+    claims: () => claims,
+    setClaims: (next) => {
+      claims = next;
     },
     confirm: (id) => sent.push(id),
     spendDaily: vi.fn(async () => true),
@@ -24,7 +32,7 @@ function setup(overrides: Partial<HandoffDeps> = {}) {
     now: () => new Date("2026-09-24T12:00:00Z"),
     ...overrides,
   };
-  return { deps, sent, claimed: () => claimed };
+  return { deps, sent, claimed: () => Object.keys(claims) };
 }
 
 test("a valid Handoff starts the Workflow with the trimmed message and recent turns", async () => {
@@ -134,7 +142,33 @@ test("concurrent sends can't double-send or pass the cap while earlier sends are
   release();
   const results = await Promise.all(sends);
   expect(deps.start).toHaveBeenCalledTimes(3);
-  expect(results.filter((r) => !r.sent)).toHaveLength(1);
+  expect(results.map((r) => (r.sent ? "sent" : r.reason))).toEqual([
+    "sent",
+    "That message is still sending.",
+    "sent",
+    "sent",
+    expect.stringContaining("several messages"),
+  ]);
+});
+
+test("a claim abandoned mid-send stops counting after a while, and can be retried", async () => {
+  const abandoned = { sent: false, at: new Date("2026-09-24T12:00:00Z").getTime() - STALE_CLAIM_MS };
+  const { deps } = setup({}, { h1: abandoned, x: abandoned, y: abandoned });
+  expect(await sendHandoff(request, deps)).toEqual({ sent: true });
+  expect(deps.start).toHaveBeenCalledTimes(1);
+});
+
+test("an unexpected throw releases the claim instead of stranding the card", async () => {
+  const human = {
+    verified: () => false,
+    verify: vi.fn(async () => true),
+    markVerified: () => {
+      throw new Error("storage error");
+    },
+  };
+  const { deps, claimed } = setup({ human });
+  await expect(sendHandoff(request, deps)).rejects.toThrow("storage error");
+  expect(claimed()).toEqual([]);
 });
 
 test("a failing daily-limit check refuses the send and frees the slot", async () => {
