@@ -7,10 +7,11 @@ import { type Claims, DAILY_HANDOFF_LIMIT, sendHandoff } from "./handoff";
 import { isSafe } from "./moderate";
 import { sentryOptions } from "./sentry";
 import { verifyTurnstile } from "./turnstile";
+import { type Chunk, EMBEDDING_MODEL, searchWriting } from "./writing";
 
 // Counts attempts, not successful answers: a failed call can still cost tokens.
 // About $0.003 per question with a short history (roughly 5k input tokens, mostly the Profile), so at most ~$3-6/day;
-// a question where the model drafts a Handoff can take two model calls (answer.ts).
+// a question where the model searches Nathan's writing or drafts a Handoff takes up to MAX_STEPS model calls (answer.ts).
 const DAILY_ANSWER_LIMIT = 1000;
 // A Conversation is forgotten 30 days after its latest question (CONTEXT.md).
 const FORGET_AFTER_SECONDS = 30 * 24 * 60 * 60;
@@ -57,7 +58,8 @@ class ChatAgent extends AIChatAgent<Env, ChatState> {
           recent: (limit) => this.recentTurns(limit),
           record: ({ question, answer }) => this.sql`INSERT INTO turns (question, answer) VALUES (${question}, ${answer})`,
         },
-        model: createWorkersAI({ binding: this.env.AI, gateway: { id: "natbot" } })(MODEL, MODEL_SETTINGS),
+        searchWriting: (query) => this.searchWriting(query),
+        model: this.workersAI()(MODEL, MODEL_SETTINGS),
       },
       { turnstileToken: typeof token === "string" ? token : undefined, abortSignal: options?.abortSignal },
     );
@@ -81,6 +83,19 @@ class ChatAgent extends AIChatAgent<Env, ChatState> {
       conversation: this.name,
       now: () => new Date(),
     });
+  }
+
+  private workersAI() {
+    return createWorkersAI({ binding: this.env.AI, gateway: { id: "natbot" } });
+  }
+
+  private searchWriting(query: string) {
+    return searchWriting(query, this.workersAI().textEmbedding(EMBEDDING_MODEL), async (vector, topK) =>
+      (await this.env.WRITING.query(vector, { topK, returnMetadata: "all" })).matches.map((m) => ({
+        score: m.score,
+        chunk: { ...(m.metadata as Omit<Chunk, "id">), id: m.id },
+      })),
+    );
   }
 
   private human(): AnswerDeps["human"] {

@@ -1,7 +1,16 @@
 import { simulateReadableStream, type UIMessage } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { expect, test, vi } from "vitest";
-import { answer, type AnswerDeps, HISTORY_TURNS, MAX_QUESTION_CHARS, OFFERED_HANDOFF, type Turn } from "./answer";
+import {
+  answer,
+  type AnswerDeps,
+  HISTORY_TURNS,
+  MAX_QUESTION_CHARS,
+  MAX_STEPS,
+  OFFERED_HANDOFF,
+  type Turn,
+} from "./answer";
+import type { Hit } from "./writing";
 
 const msg = (role: UIMessage["role"], text: string): UIMessage => ({
   id: crypto.randomUUID(),
@@ -29,6 +38,14 @@ function modelSaying(text: string) {
   });
 }
 
+const hit: Hit = {
+  title: "Is Test-Driven Development Dead?",
+  date: "2024-06-01",
+  url: "https://nathanarthur.com/writing/is-test-driven-development-dead",
+  source: "newsletter",
+  text: "Tests matter more when AI writes the code.",
+};
+
 /** Real deps with an in-memory history; override any one to exercise a path. */
 function setup(overrides: Partial<AnswerDeps> = {}, turns: Turn[] = []) {
   const model = modelSaying("He built TaskRatchet.");
@@ -37,6 +54,7 @@ function setup(overrides: Partial<AnswerDeps> = {}, turns: Turn[] = []) {
     human: { verified: () => true, verify: vi.fn(async () => true), markVerified: vi.fn() },
     spendBudget: vi.fn(async () => true),
     history: { recent: (limit) => turns.slice(-limit), record: (t) => turns.push(t) },
+    searchWriting: vi.fn(async (): Promise<Hit[]> => [hit]),
     model,
     ...overrides,
   };
@@ -187,7 +205,7 @@ test("the model can offer a draft Handoff, which reaches the page as a tool part
   const { deps, turns } = setup({ model });
   const body = await (await answer([msg("user", "Kafka?")], deps)).text();
   expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't say." }]);
-  expect(model.doStreamCalls[0].tools?.map((t) => t.name)).toEqual(["draftHandoff"]);
+  expect(model.doStreamCalls[0].tools?.map((t) => t.name)).toEqual(["draftHandoff", "searchWriting"]);
   expect(body).toContain('"toolName":"draftHandoff"');
   expect(body).toContain('"output":{"drafted":true}');
 });
@@ -208,11 +226,42 @@ test("a draft offered without any text is still recorded, so history shows the q
   expect(turns).toEqual([{ question: "Kafka?", answer: OFFERED_HANDOFF }]);
 });
 
-test("the second step can't draft again, so a question gets at most one card and two model calls", async () => {
+test("after a draft the model can only write text, so a question gets at most one card", async () => {
   const model = steps([toolCall, toolFinish], [...say("The profile doesn't say."), stop]);
   const { deps } = setup({ model });
   await (await answer([msg("user", "Kafka?")], deps)).text();
   expect(model.doStreamCalls).toHaveLength(2);
-  expect(model.doStreamCalls[0].tools).toHaveLength(1);
+  expect(model.doStreamCalls[0].tools).toHaveLength(2);
   expect(model.doStreamCalls[1].tools ?? []).toHaveLength(0);
+});
+
+const searchCall = { type: "tool-call" as const, toolCallId: "s1", toolName: "searchWriting", input: '{"query":"TDD"}' };
+
+test("the model can search Nathan's writing; the results reach the model and the page, not the history", async () => {
+  const model = steps([searchCall, toolFinish], [...say("In a 2024 newsletter post, Nathan wrote that tests matter more."), stop]);
+  const { deps, turns } = setup({ model });
+  const body = await (await answer([msg("user", "TDD?")], deps)).text();
+  expect(deps.searchWriting).toHaveBeenCalledWith("TDD");
+  expect(JSON.stringify(model.doStreamCalls[1].prompt)).toContain("Tests matter more when AI writes the code.");
+  expect(body).toContain('"toolName":"searchWriting"');
+  expect(body).toContain(hit.url);
+  expect(turns).toEqual([{ question: "TDD?", answer: "In a 2024 newsletter post, Nathan wrote that tests matter more." }]);
+});
+
+test("a failed search gives the model no results instead of failing the answer", async () => {
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  const model = steps([searchCall, toolFinish], [...say("His writing doesn't say."), stop]);
+  const { deps } = setup({ model, searchWriting: vi.fn(async () => Promise.reject(new Error("vectorize down"))) });
+  const body = await (await answer([msg("user", "TDD?")], deps)).text();
+  expect(body).toContain('"output":[]');
+  expect(body).toContain("His writing doesn't say.");
+  expect(error).toHaveBeenCalledWith("writing search failed", expect.any(Error));
+});
+
+test("a question takes at most MAX_STEPS model calls, and the last one can only write text", async () => {
+  const model = steps(...Array.from({ length: MAX_STEPS - 1 }, () => [searchCall, toolFinish]), [...say("Done."), stop]);
+  const { deps } = setup({ model });
+  await (await answer([msg("user", "q")], deps)).text();
+  expect(model.doStreamCalls).toHaveLength(MAX_STEPS);
+  expect(model.doStreamCalls.at(-1)?.tools ?? []).toHaveLength(0);
 });

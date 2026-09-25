@@ -7,6 +7,7 @@ import { About } from "./About";
 import { HandoffCard } from "./HandoffCard";
 import { useTurnstile } from "./turnstile";
 import type { ChatAgentClass, ChatState } from "./worker/chat";
+import type { Hit } from "./worker/writing";
 
 const starterQuestions = [
   "What has Nathan built?",
@@ -33,6 +34,17 @@ const draft = (p: Part) =>
   p.type === "tool-draftHandoff" && "state" in p && (p.state === "input-available" || p.state === "output-available")
     ? { id: p.toolCallId, question: (p.input as { question?: string } | undefined)?.question ?? "" }
     : undefined;
+
+/**
+ * The posts a search of Nathan's writing returned, once per post. Listed from the tool's result, not the model's
+ * text, so the Visitor sees what was searched whether or not the answer cites it (issue #28).
+ */
+const searched = (p: Part) => {
+  if (p.type !== "tool-searchWriting" || !("state" in p) || p.state !== "output-available") return undefined;
+  // Only https links: the URLs come from the feeds, which this page doesn't control.
+  const hits = (Array.isArray(p.output) ? (p.output as Hit[]) : []).filter((h) => h.url?.startsWith("https://"));
+  return [...new Map(hits.map((h) => [h.url, h])).values()];
+};
 
 /** Failed turns can leave assistant messages with nothing to show. */
 const hasContent = (m: UIMessage) => m.parts.some((p) => (p.type === "text" && p.text.trim()) || draft(p));
@@ -141,6 +153,28 @@ export function App() {
                   .map((p, i) => {
                     const d = m.role === "assistant" ? draft(p) : undefined;
                     if (d) return handoffCard(d.id, d.question);
+                    const posts = m.role === "assistant" ? searched(p) : undefined;
+                    if (posts) {
+                      return (
+                        <div key={i} className="not-prose font-sans text-sm text-muted">
+                          <p className="label">Searched Nathan's writing</p>
+                          {posts.length ? (
+                            <ul className="mt-1">
+                              {posts.map((h) => (
+                                <li key={h.url}>
+                                  <a className="text-accent underline" href={h.url} target="_blank" rel="noreferrer">
+                                    {h.title}
+                                  </a>{" "}
+                                  ({h.source === "beeminder" ? "Beeminder blog" : "newsletter"}, {h.date})
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-1">Nothing relevant found.</p>
+                          )}
+                        </div>
+                      );
+                    }
                     if (p.type !== "text") return null;
                     return m.role === "user" ? (
                       <p key={i}>{p.text}</p>
@@ -191,8 +225,8 @@ export function App() {
             Answers come only from Nathan's{" "}
             <a className="text-accent underline" href="https://github.com/narthur/natbot/blob/main/profile.md">
               public profile
-            </a>
-            , and Nathan may read these conversations to improve the assistant.{" "}
+            </a>{" "}
+            and his published writing, and Nathan may read these conversations to improve the assistant.{" "}
             <button
               type="button"
               onClick={() => setDirectHandoff(crypto.randomUUID())}

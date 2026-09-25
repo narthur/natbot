@@ -6,6 +6,7 @@ import { sentryOptions } from "./sentry";
 export { Budget } from "./budget";
 export { ChatAgent } from "./chat";
 export { HandoffWorkflow } from "./workflow";
+export { WritingIndexWorkflow } from "./writing-index";
 
 export default withSentry(sentryOptions, {
   async fetch(request, env) {
@@ -17,5 +18,8 @@ export default withSentry(sentryOptions, {
       return new Response("Too many requests", { status: 429 });
     }
     return (await routeAgentRequest(request, env)) ?? new Response("Not found", { status: 404 });
+  },
+  async scheduled(_controller, env) {
+    await env.INDEX_WORKFLOW.create();
   },
 } satisfies ExportedHandler<Env>);
