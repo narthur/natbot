@@ -38,5 +38,6 @@ export async function sendMail(apiKey: string, mail: Mail): Promise<void> {
     // Shorter than the Workflow step's timeout, which doesn't abort the request itself.
     signal: AbortSignal.timeout(20_000),
   });
-  if (!res.ok) throw new Error(`mailgun ${res.status}: ${await res.text()}`);
+  // Only the status: the body can echo the Visitor's address, and Mailgun's own logs keep the details.
+  if (!res.ok) throw new Error(`mailgun ${res.status}`);
 }

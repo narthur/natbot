@@ -28,6 +28,7 @@ flowchart LR
 
 - **Answers.** Every prompt holds the whole [Profile](profile.md), with no retrieval ([ADR 0002](docs/adr/0002-whole-profile-in-context.md)). The model sees only history the server recorded itself. History a client sends is ignored, so a Visitor can't plant fake assistant turns. See [`src/worker/answer.ts`](src/worker/answer.ts).
 - **Handoffs.** The model has one tool, `draftHandoff`, which has no effect: it only puts an editable draft on the page ([ADR 0003](docs/adr/0003-one-effect-free-tool.md)). Nothing is sent until the Visitor adds an email address and presses Send. That runs checks and a moderation pass, then starts a durable Workflow that emails Nathan with the Visitor as Reply-To ([ADR 0004](docs/adr/0004-mailgun-for-handoff-email.md)). See [`src/worker/handoff.ts`](src/worker/handoff.ts) and [`src/worker/workflow.ts`](src/worker/workflow.ts).
+- **Errors.** Every `console.error` in the Worker, Durable Object and Workflow reports to Sentry, and so do the page's errors. Visitor text and email addresses are kept out: no breadcrumbs, no request or AI payloads, and AI SDK error messages are redacted. Events carry the Conversation ID instead ([`src/worker/sentry.ts`](src/worker/sentry.ts)).
 - **Forgetting.** Each question pushes a Conversation's 30-day timer back. When the timer fires, the Durable Object destroys itself and everything in it.
 
 ## Abuse hardening

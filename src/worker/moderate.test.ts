@@ -11,6 +11,7 @@ test("reads Llama Guard's JSON and plain-text verdicts", async () => {
 });
 
 test("an unreadable verdict throws instead of guessing", async () => {
-  await expect(isSafe(ai("maybe"), "hi")).rejects.toThrow("unreadable");
+  // The output can quote the Handoff, and the error goes to Sentry, so the error carries none of it.
+  await expect(isSafe(ai("maybe: I'll quote the visitor"), "hi")).rejects.toThrow(/^unreadable llama guard output \(string\)$/);
   await expect(isSafe(ai({}), "hi")).rejects.toThrow("unreadable");
 });

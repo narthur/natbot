@@ -15,5 +15,6 @@ export async function isSafe(ai: Ai, text: string): Promise<boolean> {
     if (verdict === "safe") return true;
     if (verdict === "unsafe") return false;
   }
-  throw new Error(`unreadable llama guard output: ${JSON.stringify(response)}`);
+  // Only its type: Llama Guard's output can quote the Handoff.
+  throw new Error(`unreadable llama guard output (${typeof response})`);
 }

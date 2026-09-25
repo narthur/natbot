@@ -6,7 +6,7 @@ import Markdown from "react-markdown";
 import { About } from "./About";
 import { HandoffCard } from "./HandoffCard";
 import { useTurnstile } from "./turnstile";
-import type { ChatAgent, ChatState } from "./worker/chat";
+import type { ChatAgentClass, ChatState } from "./worker/chat";
 
 const starterQuestions = [
   "What has Nathan built?",
@@ -39,7 +39,7 @@ const hasContent = (m: UIMessage) => m.parts.some((p) => (p.type === "text" && p
 
 export function App() {
   const [name] = useState(conversationId);
-  const agent = useAgent<ChatAgent, ChatState>({ agent: "ChatAgent", name });
+  const agent = useAgent<ChatAgentClass, ChatState>({ agent: "ChatAgent", name });
   const { messages, sendMessage, status, error } = useAgentChat({ agent });
   const [input, setInput] = useState("");
   // The id of a Handoff opened from the "Ask Nathan directly" link, if any.
