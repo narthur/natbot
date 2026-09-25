@@ -507,3 +507,31 @@ Did you figure out why the drop? If it's also not doing a search, just search ex
 
 All done, merged, deployed, and job triggered. Let's create a new pr that gives users a way to reset the conversation if they'd like to start fresh.
 
+## 2026-09-25 17:41:09
+
+How does tool use work? If the agent says something, then calls a tool, is it able to say something again after the tool call?
+
+## 2026-09-25 17:41:56
+
+Fresh conversation, I got this. It searched my writings and then idn't say anything.
+
+
+
+<pasted_content id="1422">
+Q.You asked:
+
+What has Nathan been thinking about recently?
+A.Answer:
+
+The profile shows his stable views, but not what he's been writing about recently. Let me check his recent posts.
+
+Searched Nathan's writing
+
+    On Writing Publicly (newsletter, 2025-06-20)
+
+Searched Nathan's writing
+
+    Writing with AI, Responsibly (newsletter, 2026-03-11)
+</pasted_content id="1422">
+
+
