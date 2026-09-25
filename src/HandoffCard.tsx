@@ -52,7 +52,7 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
     >
       <p className="label text-accent">Letter to Nathan</p>
       <p className="font-serif text-lg">
-        {question ? "The profile doesn't cover this. Send it to Nathan?" : "Send a question to Nathan"}{" "}
+        {question ? "The profile doesn't cover this. Send it to Nathan?" : "Send a question to Nathan."}{" "}
         He gets it by email and replies to you directly.
       </p>
       <label className="flex flex-col gap-1">
@@ -63,7 +63,10 @@ export function HandoffCard({ id, question, sent, needsToken, token, onTokenUsed
           maxLength={2000}
           rows={2}
           required
-          className="border-b border-muted bg-transparent py-1.5 font-serif text-lg"
+          // Opened from "Ask Nathan directly", the card can land below the fold on a phone; focusing it scrolls it
+          // into view, clear of the pinned ask bar (scroll-mb), and puts the Visitor where they'll type.
+          autoFocus={!question}
+          className="scroll-mb-56 border-b border-muted bg-transparent py-1.5 font-serif text-lg"
         />
       </label>
       <label className="flex flex-col gap-1">
