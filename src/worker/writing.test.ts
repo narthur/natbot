@@ -9,6 +9,7 @@ import {
   hash,
   htmlToText,
   inMemoryNearest,
+  keepFailed,
   type Manifest,
   MIN_SCORE,
   parseFeed,
@@ -146,4 +147,11 @@ test("a Post's hash changes with its content and nothing else", async () => {
   for (const change of [{ text: "b" }, { title: "U" }, { date: "2026-01-02" }, { url: "https://x/q" }]) {
     expect(await hash({ ...p, ...change })).not.toBe(await hash(p));
   }
+});
+
+test("a Post that failed to read keeps its entry, so its vectors aren't stale; a removed one is still stale", () => {
+  const before: Manifest = { "beeminder:a": { hash: "1", ids: ["a0"] }, "beeminder:gone": { hash: "2", ids: ["g0"] } };
+  const after = keepFailed(before, {}, ["beeminder:a", "beeminder:new"]);
+  expect(after).toEqual({ "beeminder:a": before["beeminder:a"] });
+  expect(staleIds(before, after)).toEqual(["g0"]);
 });
