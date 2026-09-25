@@ -9,7 +9,7 @@ It started as the optional AI assignment on a Cloudflare application. It runs on
 | LLM | Qwen 3.8 27B on Workers AI, through AI Gateway |
 | Workflow / coordination | One Durable Object per Conversation (Agents SDK), Budget Durable Objects that cap daily answers and Handoffs, a Workflow that emails Handoffs to Nathan with retries, and a daily cron-started Workflow that indexes Nathan's writing |
 | User input via chat | A React chat page served as Workers static assets and streamed over WebSocket |
-| Memory / state | Each Conversation's history lives in its Durable Object's SQLite and is resumed from the same browser. It is forgotten 30 days after the last question. Nathan's published writing is embedded in Vectorize, with a KV record of what's indexed. |
+| Memory / state | Each Conversation's history lives in its Durable Object's SQLite and is resumed from the same browser. It is forgotten 30 days after the last question, or at once if the Visitor starts over. Nathan's published writing is embedded in Vectorize, with a KV record of what's indexed. |
 
 The prompts used to build it are in [PROMPTS.md](PROMPTS.md). [docs/process.md](docs/process.md) describes what surrounded them: the standing instructions, skills, review loop, hooks and checks that shaped each change.
 

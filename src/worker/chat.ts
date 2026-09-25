@@ -14,7 +14,7 @@ import { EMBEDDING_MODEL, searchWriting, vectorizeNearest } from "./writing";
 // searches Nathan's writing or drafts a Handoff takes up to MAX_STEPS calls (answer.ts), so at most ~$3-9/day; a
 // search's embedding and Vectorize query add a small fraction of a call.
 const DAILY_ANSWER_LIMIT = 1000;
-// A Conversation is forgotten 30 days after its latest question (CONTEXT.md).
+// A Conversation is forgotten 30 days after its latest question, unless the Visitor starts over first (CONTEXT.md).
 const FORGET_AFTER_SECONDS = 30 * 24 * 60 * 60;
 
 /**
@@ -142,7 +142,7 @@ class ChatAgent extends AIChatAgent<Env, ChatState> {
   @callable()
   async startOver() {
     setTag("conversation", this.name);
-    await this.schedule(0, "forget");
+    await this.schedule(0, "forget", undefined, { idempotent: true });
   }
 
   /** Deletes everything in this Conversation: turns, persisted messages, the Turnstile pass, Handoff ids, and its schedules. */
