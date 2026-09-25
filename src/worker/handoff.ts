@@ -65,18 +65,16 @@ export async function sendHandoff(request: unknown, deps: HandoffDeps): Promise<
   deps.setClaims({ ...live, [id]: { sent: false, at: now } });
 
   // A refusal or an unexpected throw before the Workflow starts releases the claim. Once it has started,
-  // nothing releases it, or a retry could email Nathan twice.
+  // nothing releases it, or a retry could email Nathan twice. The accepted cost: an eviction between marking
+  // the claim sent and creating the Workflow loses that one Handoff instead.
   const release = () => {
     const { [id]: _released, ...rest } = deps.claims();
     deps.setClaims(rest);
   };
-  let result: HandoffResult;
-  try {
-    result = await deliver({ id, at: now, text, email, turnstileToken }, deps);
-  } catch (error) {
+  const result = await deliver({ id, at: now, text, email, turnstileToken }, deps).catch((error) => {
     release();
     throw error;
-  }
+  });
   if (result.sent) deps.confirm(id);
   else release();
   return result;

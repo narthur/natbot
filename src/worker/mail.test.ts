@@ -35,6 +35,7 @@ test("sendMail posts the fields to Mailgun with the domain key", async () => {
   const [url, init] = fetch.mock.calls[0] ?? [];
   expect(url).toBe("https://api.mailgun.net/v3/mail.nathanarthur.com/messages");
   expect(init?.method).toBe("POST");
+  expect(init?.signal).toBeInstanceOf(AbortSignal);
   expect(new Headers(init?.headers).get("Authorization")).toBe(`Basic ${btoa("api:key-123")}`);
   const form = init?.body as FormData;
   expect(form.get("to")).toBe("nathan@nathanarthur.com");
