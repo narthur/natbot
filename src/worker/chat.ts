@@ -1,9 +1,11 @@
 import { AIChatAgent, type OnChatMessageOptions } from "@cloudflare/ai-chat";
+import { instrumentAgentWithSentry, setTag } from "@sentry/cloudflare";
 import { callable } from "agents";
 import { createWorkersAI } from "workers-ai-provider";
 import { type AnswerDeps, answer, MODEL, MODEL_SETTINGS, type Turn } from "./answer";
 import { type Claims, DAILY_HANDOFF_LIMIT, sendHandoff } from "./handoff";
 import { isSafe } from "./moderate";
+import { sentryOptions } from "./sentry";
 import { verifyTurnstile } from "./turnstile";
 
 // Counts attempts, not successful answers: a failed call can still cost tokens.
@@ -20,7 +22,7 @@ const FORGET_AFTER_SECONDS = 30 * 24 * 60 * 60;
 export type ChatState = { verified: boolean; sentHandoffs?: string[] };
 
 /** Adapts one Conversation's Durable Object to the answer module. */
-export class ChatAgent extends AIChatAgent<Env, ChatState> {
+class Conversation extends AIChatAgent<Env, ChatState> {
   maxPersistedMessages = 100;
   initialState: ChatState = { verified: false, sentHandoffs: [] };
 
@@ -40,6 +42,7 @@ export class ChatAgent extends AIChatAgent<Env, ChatState> {
   }
 
   async onChatMessage(_onFinish: unknown, options?: OnChatMessageOptions) {
+    setTag("conversation", this.name);
     // A recovery replay after an interruption isn't a new question.
     if (!options?.continuation) await this.forgetLater();
     const token = options?.body?.turnstileToken;
@@ -62,6 +65,7 @@ export class ChatAgent extends AIChatAgent<Env, ChatState> {
   /** Called by the page when the Visitor presses Send on a Handoff. The model has no way to call it (ADR 0003). */
   @callable()
   async sendHandoff(request: unknown) {
+    setTag("conversation", this.name);
     return sendHandoff(request, {
       human: this.human(),
       claims: () => this.ctx.storage.kv.get<Claims>("handoffs") ?? {},
@@ -121,6 +125,7 @@ export class ChatAgent extends AIChatAgent<Env, ChatState> {
 
   /** Deletes everything in this Conversation: turns, persisted messages, the Turnstile pass, Handoff ids, and its schedules. */
   async forget() {
+    setTag("conversation", this.name);
     try {
       await this.destroy();
     } catch (error) {
@@ -129,3 +134,7 @@ export class ChatAgent extends AIChatAgent<Env, ChatState> {
     }
   }
 }
+
+// Errors in the Conversation's handlers, callables and scheduled callbacks reach Sentry (issue #16).
+export const ChatAgent = instrumentAgentWithSentry(sentryOptions, Conversation);
+export type ChatAgent = Conversation;

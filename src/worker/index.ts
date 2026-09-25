@@ -1,11 +1,13 @@
+import { withSentry } from "@sentry/cloudflare";
 import { routeAgentRequest } from "agents";
 import { CONVERSATION_PATH } from "./conversation-path";
+import { sentryOptions } from "./sentry";
 
 export { Budget } from "./budget";
 export { ChatAgent } from "./chat";
 export { HandoffWorkflow } from "./workflow";
 
-export default {
+export default withSentry(sentryOptions, {
   async fetch(request, env) {
     if (!CONVERSATION_PATH.test(new URL(request.url).pathname)) {
       return new Response("Not found", { status: 404 });
@@ -16,4 +18,4 @@ export default {
     }
     return (await routeAgentRequest(request, env)) ?? new Response("Not found", { status: 404 });
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env>);

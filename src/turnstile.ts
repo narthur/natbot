@@ -1,3 +1,4 @@
+import { captureMessage } from "@sentry/react";
 import { useEffect, useRef, useState } from "react";
 
 // Site keys are public. The dev key is Cloudflare's test key that always passes.
@@ -29,6 +30,8 @@ export function useTurnstile(enabled: boolean) {
 
   useEffect(() => {
     const turnstile = window.turnstile;
+    // Asking stays off until it loads, so a spike here means Visitors are being turned away.
+    if (enabled && !turnstile) captureMessage("turnstile script didn't load", "warning");
     if (!enabled || !turnstile || !ref.current) return;
     const id = turnstile.render(ref.current, {
       sitekey: SITE_KEY,
@@ -39,7 +42,8 @@ export function useTurnstile(enabled: boolean) {
         setFailed(false);
       },
       "expired-callback": () => setToken(undefined),
-      "error-callback": () => {
+      "error-callback": (code: string) => {
+        captureMessage(`turnstile widget error ${code}`, "warning");
         setFailed(true);
         setToken(undefined);
       },

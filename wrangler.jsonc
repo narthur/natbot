@@ -19,7 +19,11 @@
   },
   "workflows": [{ "name": "natbot-handoff", "binding": "HANDOFF_WORKFLOW", "class_name": "HandoffWorkflow" }],
   // Secrets: TURNSTILE_SECRET_KEY, MAILGUN_API_KEY (domain-scoped to mail.nathanarthur.com, ADR 0004).
-  "vars": { "HANDOFF_TO": "nathan@nathanarthur.com" },
+  // SENTRY_DSN (natbot-worker) only lets you send events, so it isn't a secret.
+  "vars": {
+    "HANDOFF_TO": "nathan@nathanarthur.com",
+    "SENTRY_DSN": "https://28b60ace403cfd26dd17ecba345c43b3@o4511632382558208.ingest.us.sentry.io/4512148291846144"
+  },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatAgent", "Budget"] }],
   // Limits are per Cloudflare location, so they bound bursts rather than exact totals; Budget is the hard daily cap.
   "ratelimits": [
