@@ -3,6 +3,7 @@ import { useAgent } from "agents/react";
 import type { UIMessage } from "ai";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { About } from "./About";
 import { HandoffCard } from "./HandoffCard";
 import { useTurnstile } from "./turnstile";
 import type { ChatAgent, ChatState } from "./worker/chat";
@@ -65,7 +66,8 @@ export function App() {
   );
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Not on an empty Conversation: that would scroll a phone past the header.
+    if (messages.length) endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   function ask(text: string) {
@@ -85,106 +87,122 @@ export function App() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 py-12 text-stone-900 dark:text-stone-100">
-      <h1 className="text-2xl font-semibold">Ask about Nathan Arthur's career</h1>
-      <p className="mt-2 text-stone-600 dark:text-stone-400">
-        Ask a question about Nathan's work and get an answer drawn from his career profile.
-      </p>
+    <div className="flex min-h-dvh flex-col lg:grid lg:grid-cols-[25rem_minmax(0,1fr)]">
+      <About />
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pt-6 lg:min-h-dvh lg:px-18 lg:pt-14">
+        {messages.length === 0 && (
+          <>
+            <h2 className="font-serif text-4xl leading-none font-medium tracking-tight lg:text-6xl">
+              Interview the résumé.
+            </h2>
+            <p className="mt-4 font-serif text-lg text-muted lg:text-xl">
+              Put a question to his career profile. Anything it can't answer goes to him by email.
+            </p>
+            <p className="label mt-8 mb-2.5 text-muted">Opening questions</p>
+            <ol className="border-t border-rule">
+              {starterQuestions.map((q) => (
+                <li key={q} className="border-b border-rule">
+                  <button
+                    type="button"
+                    onClick={() => ask(q)}
+                    disabled={!ready}
+                    className="flex min-h-14 w-full items-baseline gap-4 py-3 text-left font-serif text-xl hover:text-accent disabled:opacity-50 lg:text-2xl"
+                  >
+                    <span className="label text-accent">Q.</span>
+                    {q}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
 
-      {messages.length === 0 && (
-        <ul className="mt-8 flex flex-wrap gap-2">
-          {starterQuestions.map((q) => (
-            <li key={q}>
-              <button
-                type="button"
-                onClick={() => ask(q)}
-                disabled={!ready}
-                className="rounded-full border border-stone-300 px-3 py-1 text-sm hover:bg-stone-100 disabled:opacity-40 dark:border-stone-700 dark:hover:bg-stone-900"
+        <ol className="flex flex-col gap-5" aria-live="polite">
+          {messages.filter(hasContent).map((m: UIMessage, i) => (
+            <li
+              key={m.id}
+              className={`grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-2 gap-y-4 ${m.role === "user" && i > 0 ? "border-t border-rule pt-4" : ""}`}
+            >
+              <span className={`label pt-1.5 ${m.role === "user" ? "text-accent" : "text-muted"}`}>
+                <span aria-hidden="true">{m.role === "user" ? "Q." : "A."}</span>
+                <span className="sr-only">{m.role === "user" ? "You asked:" : "Answer:"}</span>
+              </span>
+              <div
+                className={
+                  m.role === "user"
+                    ? "font-serif text-xl leading-snug font-semibold"
+                    : "prose prose-lg max-w-none font-serif text-body prose-a:text-accent"
+                }
               >
-                {q}
-              </button>
+                {/* The answer reads first; a draft the model offered goes below it, even if it came first. */}
+                {[...m.parts]
+                  .sort((a, b) => Number(Boolean(draft(a))) - Number(Boolean(draft(b))))
+                  .map((p, i) => {
+                    const d = m.role === "assistant" ? draft(p) : undefined;
+                    if (d) return handoffCard(d.id, d.question);
+                    if (p.type !== "text") return null;
+                    return m.role === "user" ? (
+                      <p key={i}>{p.text}</p>
+                    ) : (
+                      <Markdown key={i} disallowedElements={["img"]}>
+                        {p.text}
+                      </Markdown>
+                    );
+                  })}
+              </div>
             </li>
           ))}
-        </ul>
-      )}
+          {status === "submitted" && <li className="pl-11 font-serif text-muted italic">Thinking…</li>}
+          {error && <li className="pl-11 text-accent">{error.message}</li>}
+        </ol>
+        {directHandoff && <div className="mt-5">{handoffCard(directHandoff, "")}</div>}
+        <div ref={endRef} />
 
-      <ol className="mt-8 flex flex-col gap-4" aria-live="polite">
-        {messages.filter(hasContent).map((m: UIMessage) => (
-          <li key={m.id} className={m.role === "user" ? "self-end" : "self-start"}>
-            <span className="sr-only">{m.role === "user" ? "You asked:" : "Answer:"}</span>
-            <div
-              className={
-                m.role === "user"
-                  ? "rounded-2xl bg-stone-200 px-4 py-2 dark:bg-stone-800"
-                  : "prose prose-stone max-w-none dark:prose-invert"
-              }
+        <div className="sticky bottom-0 mt-auto bg-paper pt-6 pb-5">
+          <div ref={turnstile.ref} />
+          {needsCheck && turnstile.failed && (
+            <p className="text-sm text-accent">
+              The check that keeps bots out couldn't load, so asking is turned off. Try reloading the page, or allow
+              challenges.cloudflare.com if a content blocker is on.
+            </p>
+          )}
+          <form className="flex items-end gap-4 border-b-2 border-ink pt-2" onSubmit={onSubmit}>
+            <label htmlFor="question" className="sr-only">
+              Your question
+            </label>
+            <input
+              id="question"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              maxLength={2000}
+              placeholder={messages.length ? "Next question…" : "Your question…"}
+              className="min-h-14 min-w-0 flex-1 bg-transparent font-serif text-xl placeholder:text-muted lg:text-2xl"
+            />
+            <button
+              type="submit"
+              disabled={!ready || !input.trim()}
+              className="label mb-1 min-h-11 rounded-xs bg-accent px-5 text-card hover:bg-accent-dark disabled:opacity-50"
             >
-              {/* The answer reads first; a draft the model offered goes below it, even if it came first. */}
-              {[...m.parts]
-                .sort((a, b) => Number(Boolean(draft(a))) - Number(Boolean(draft(b))))
-                .map((p, i) => {
-                  const d = m.role === "assistant" ? draft(p) : undefined;
-                  if (d) return handoffCard(d.id, d.question);
-                  if (p.type !== "text") return null;
-                  return m.role === "user" ? (
-                    <p key={i}>{p.text}</p>
-                  ) : (
-                    <Markdown key={i} disallowedElements={["img"]}>
-                      {p.text}
-                    </Markdown>
-                  );
-                })}
-            </div>
-          </li>
-        ))}
-        {status === "submitted" && <li className="text-stone-500">Thinking…</li>}
-        {error && <li className="text-red-700 dark:text-red-400">{error.message}</li>}
-      </ol>
-      {directHandoff && <div className="mt-4">{handoffCard(directHandoff, "")}</div>}
-      <div ref={endRef} />
-
-      <div ref={turnstile.ref} className="mt-auto pt-8" />
-      {needsCheck && turnstile.failed && (
-        <p className="text-sm text-red-700 dark:text-red-400">
-          The check that keeps bots out couldn't load, so asking is turned off. Try reloading the page, or allow
-          challenges.cloudflare.com if a content blocker is on.
-        </p>
-      )}
-      <form className="flex gap-2 pt-2" onSubmit={onSubmit}>
-        <label htmlFor="question" className="sr-only">
-          Your question
-        </label>
-        <input
-          id="question"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          maxLength={2000}
-          placeholder="Ask about Nathan's career"
-          className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-transparent px-4 py-3 dark:border-stone-700"
-        />
-        <button
-          type="submit"
-          disabled={!ready || !input.trim()}
-          className="rounded-lg bg-stone-900 px-4 py-3 text-white disabled:opacity-40 dark:bg-stone-100 dark:text-stone-900"
-        >
-          Ask
-        </button>
-      </form>
-      <p className="mt-3 text-xs text-stone-500">
-        Answers come only from Nathan's{" "}
-        <a className="underline" href="https://github.com/narthur/natbot/blob/main/profile.md">
-          public profile
-        </a>
-        . Nathan may read these conversations to improve the assistant.{" "}
-        <button
-          type="button"
-          onClick={() => setDirectHandoff(crypto.randomUUID())}
-          disabled={agent.state === undefined}
-          className="underline"
-        >
-          Ask Nathan directly
-        </button>
-      </p>
-    </main>
+              Ask
+            </button>
+          </form>
+          <p className="mt-3 text-sm text-muted">
+            Answers come only from Nathan's{" "}
+            <a className="text-accent underline" href="https://github.com/narthur/natbot/blob/main/profile.md">
+              public profile
+            </a>
+            , and Nathan may read these conversations to improve the assistant.{" "}
+            <button
+              type="button"
+              onClick={() => setDirectHandoff(crypto.randomUUID())}
+              disabled={agent.state === undefined}
+              className="text-accent underline"
+            >
+              Ask Nathan directly
+            </button>
+          </p>
+        </div>
+      </main>
+    </div>
   );
 }

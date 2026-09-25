@@ -390,3 +390,19 @@ Sure
 
 Merged. Create a pr that populates the readme, and drive it to mergable
 
+## 2026-09-25 10:09:44
+
+Merged. Let's create an artifact canvas to explore some design directions.
+
+## 2026-09-25 10:15:13
+
+Hmm, yeah, let's explore some combinations of d and b
+
+## 2026-09-25 10:17:41
+
+Let's explore what mobile would look like for F
+
+## 2026-09-25 10:20:13
+
+I like it. Implement F in a new pr and drive it to mergable.
+

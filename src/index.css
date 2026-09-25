@@ -1,2 +1,30 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* Direction F ("Ink"): ivory paper and a near-black panel, set in Newsreader over Public Sans. */
+@theme {
+  --color-paper: #f6f1e7;
+  --color-card: #fbf8f1;
+  --color-ink: #1f1b16;
+  --color-ink-rule: #4a4238;
+  --color-body: #2b251e;
+  --color-muted: #5b5348;
+  --color-rule: #cfc4b0;
+  --color-accent: #7a2e1f;
+  --color-accent-dark: #5c2217;
+  --color-on-ink: #f6f1e7;
+  --color-on-ink-muted: #d8cfbf;
+  --color-on-ink-label: #b8ab96;
+  --color-on-ink-accent: #d9a58f;
+  --font-serif: "Newsreader Variable", Georgia, serif;
+  --font-sans: "Public Sans", system-ui, sans-serif;
+}
+
+/* The small uppercase labels: "In conversation", "Q.", "Letter to Nathan". */
+@utility label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
