@@ -12,7 +12,6 @@ test("reads Llama Guard's JSON and plain-text verdicts", async () => {
 
 test("an unreadable verdict throws instead of guessing", async () => {
   // The output can quote the Handoff, and the error goes to Sentry, so the error carries none of it.
-  vi.spyOn(console, "warn").mockImplementation(() => {});
-  await expect(isSafe(ai("maybe: I'll quote the visitor"), "hi")).rejects.toThrow(/^unreadable llama guard output$/);
+  await expect(isSafe(ai("maybe: I'll quote the visitor"), "hi")).rejects.toThrow(/^unreadable llama guard output \(string\)$/);
   await expect(isSafe(ai({}), "hi")).rejects.toThrow("unreadable");
 });

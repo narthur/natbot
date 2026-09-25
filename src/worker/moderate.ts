@@ -15,7 +15,6 @@ export async function isSafe(ai: Ai, text: string): Promise<boolean> {
     if (verdict === "safe") return true;
     if (verdict === "unsafe") return false;
   }
-  // Llama Guard's output can quote the Handoff, so it goes to the Worker's logs, not into the error Sentry sees.
-  console.warn("unreadable llama guard output", response);
-  throw new Error("unreadable llama guard output");
+  // Only its type: Llama Guard's output can quote the Handoff.
+  throw new Error(`unreadable llama guard output (${typeof response})`);
 }

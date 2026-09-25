@@ -27,6 +27,7 @@ class ChatAgent extends AIChatAgent<Env, ChatState> {
   initialState: ChatState = { verified: false, sentHandoffs: [] };
 
   async onStart() {
+    setTag("conversation", this.name);
     this.sql`CREATE TABLE IF NOT EXISTS turns (question TEXT NOT NULL, answer TEXT NOT NULL)`;
     // Conversations that passed before the page could see it.
     if (this.passedTurnstile() && !this.state.verified) this.setState({ ...this.state, verified: true });

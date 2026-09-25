@@ -9,8 +9,8 @@ import { captureConsoleIntegration, type ErrorEvent } from "@sentry/cloudflare";
  * lose `extra` (console capture puts every logged argument there, and the AI SDK's errors carry the prompt) and
  * any request body. The Conversation ID, a random UUID, is enough to trace an event.
  *
- * Error messages are sent as they are, so never put request or response content in one: log it with
- * `console.warn`, which stays in the Worker's logs (see mail.ts and moderate.ts).
+ * Error messages are sent as they are, so never put request or response content in one (see mail.ts and
+ * moderate.ts), and don't log it either.
  */
 export const sentryOptions = (env: Env) => ({
   dsn: env.SENTRY_DSN,
