@@ -362,3 +362,15 @@ proceed
 
 We should create a follow-up issue to add sentry
 
+## 2026-09-25 08:10:31
+
+Address feedback on the pr and drive to mergable
+
+## 2026-09-25 08:17:04
+
+Secret added, merged, and tested, it works
+
+## 2026-09-25 08:19:57
+
+Adversarial evals
+
