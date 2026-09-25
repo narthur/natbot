@@ -10,9 +10,11 @@ export const FEED = "https://nathanarthur.com/rss.xml";
 export const EMBEDDING_MODEL = "@cf/qwen/qwen3-embedding-0.6b";
 // Qwen3 embeddings expect queries, but not documents, to carry an instruction.
 const QUERY_PREFIX = "Instruct: Given a question about Nathan Arthur, find passages of his writing that answer it\nQuery: ";
+// Enough for a question that spans a few posts; each passage adds to every later model call's input.
 export const SEARCH_RESULTS = 5;
 // Relevant passages scored 0.40-0.66 on sample questions, unrelated ones under 0.37.
 export const MIN_SCORE = 0.4;
+// About 300 tokens: a few paragraphs, enough to quote in context, small enough to stay on one topic.
 const CHUNK_CHARS = 1200;
 
 /**
@@ -102,7 +104,8 @@ export function beeminderText(html: string, start: string): string {
   // The post's tag list follows it.
   const to = text.indexOf("\n\nTags:", from);
   if (from < 0) throw new Error("beeminder post changed: start sentence not found");
-  return text.slice(from, to < 0 ? undefined : to).trim();
+  if (to < 0) throw new Error("beeminder post changed: tag list not found");
+  return text.slice(from, to).trim();
 }
 
 async function get(url: string): Promise<string> {
@@ -111,16 +114,24 @@ async function get(url: string): Promise<string> {
   return res.text();
 }
 
-/** Every Post to index, fetched live, without the excluded ones. */
-export async function fetchPosts(): Promise<Post[]> {
-  const newsletter = parseFeed(await get(FEED)).filter((p) => !EXCLUDED.has(p.slug));
-  const beeminder = await Promise.all(
+/**
+ * Every Post to index, fetched live, without the excluded ones. A Beeminder post that can't be fetched or read is
+ * listed in `failed` (by postKey) instead of failing the rest; the newsletter feed failing fails the whole fetch.
+ */
+export async function fetchPosts(): Promise<{ posts: Post[]; failed: string[] }> {
+  const feed = parseFeed(await get(FEED));
+  // An empty feed is a broken response, not a newsletter with no posts: indexing it would delete every vector.
+  if (!feed.length) throw new Error("newsletter feed has no posts");
+  const newsletter = feed.filter((p) => !EXCLUDED.has(p.slug));
+  const beeminder = await Promise.allSettled(
     BEEMINDER_POSTS.map(async ({ slug, title, date, start }) => {
       const url = `https://blog.beeminder.com/${slug}/`;
       return { source: "beeminder" as const, slug, title, date, url, text: beeminderText(await get(url), start) };
     }),
   );
-  return [...newsletter, ...beeminder];
+  const failed = BEEMINDER_POSTS.filter((_, i) => beeminder[i]?.status === "rejected").map((p) => `beeminder:${p.slug}`);
+  for (const r of beeminder) if (r.status === "rejected") console.error("couldn't read a beeminder post", r.reason);
+  return { posts: [...newsletter, ...beeminder.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))], failed };
 }
 
 /** A Post split at paragraph breaks into chunks of about CHUNK_CHARS; a longer paragraph stays whole. */
@@ -144,6 +155,31 @@ export async function embedChunks(model: EmbeddingModel, chunks: Chunk[]): Promi
 
 /** The nearest chunks to a vector, best first, with cosine scores. Vectorize in production, in memory in the eval. */
 export type Nearest = (vector: number[], topK: number) => Promise<{ score: number; chunk: Chunk }[]>;
+
+/** Chunks as Vectorize records: the id, and the rest of the Chunk as metadata, which vectorizeNearest reads back. */
+export const toVectors = (chunks: Chunk[], vectors: number[][]): VectorizeVector[] =>
+  chunks.map(({ id, ...metadata }, i) => ({ id, values: vectors[i] ?? [], metadata }));
+
+/** Search over Vectorize, whose records toVectors wrote. */
+export const vectorizeNearest =
+  (index: VectorizeIndex): Nearest =>
+  async (vector, topK) =>
+    (await index.query(vector, { topK, returnMetadata: "all" })).matches.map((m) => ({
+      score: m.score,
+      chunk: { ...(m.metadata as Omit<Chunk, "id">), id: m.id },
+    }));
+
+const cosine = (a: number[], b: number[]) =>
+  a.reduce((s, x, i) => s + x * (b[i] ?? 0), 0) / Math.hypot(...a) / Math.hypot(...b);
+
+/** Search over chunks held in memory: the eval's stand-in for Vectorize. */
+export const inMemoryNearest =
+  (chunks: Chunk[], vectors: number[][]): Nearest =>
+  async (vector, topK) =>
+    chunks
+      .map((chunk, i) => ({ score: cosine(vector, vectors[i] ?? []), chunk }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK);
 
 /** Passages of Nathan's writing relevant to `query`, best first. */
 export async function searchWriting(query: string, model: EmbeddingModel, nearest: Nearest): Promise<Hit[]> {

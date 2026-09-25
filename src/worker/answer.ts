@@ -20,8 +20,8 @@ export const MODEL_SETTINGS = { chat_template_kwargs: { enable_thinking: false }
 export const MAX_QUESTION_CHARS = 2000;
 // Bounds the input tokens every call pays for, alongside the whole Profile (ADR 0002).
 export const HISTORY_TURNS = 10;
-// Model calls per question: room for a search and a draft, then the answer. Every call pays for the whole Profile
-// again, so this sets a question's worst-case cost.
+// Model calls per question: room for two tool steps (a search and a draft, or two searches), then the answer.
+// Every call pays for the whole Profile again, so this sets a question's worst-case cost.
 export const MAX_STEPS = 3;
 
 /**
@@ -38,6 +38,10 @@ const draftHandoff = tool({
 /**
  * Searches Nathan's published writing (ADR 0006): public data, no effects (ADR 0003). The results also reach the
  * page, which lists them itself rather than trusting the model to cite them.
+ *
+ * The rules for using passages (the Profile outranks them, attribute and date, never a current fact) live in this
+ * description, not the system prompt's Rules. With them in the Rules, the eval's gap questions got a draft Handoff
+ * in 5 of 16 runs against main's 11; here, 10 of 16.
  */
 const searchWriting = (search: AnswerDeps["searchWriting"]) =>
   tool({
@@ -46,7 +50,8 @@ const searchWriting = (search: AnswerDeps["searchWriting"]) =>
     inputSchema: z.object({ query: z.string().max(300).describe("What to look for, as a question or phrase") }),
     execute: async ({ query }): Promise<Hit[]> =>
       search(query).catch((error) => {
-        console.error("writing search failed", error);
+        // Only the error's name: AI SDK errors can quote the query, which comes from the Visitor's question.
+        console.error("writing search failed", error instanceof Error ? error.name : typeof error);
         return [];
       }),
   });

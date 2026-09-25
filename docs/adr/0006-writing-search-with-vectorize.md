@@ -4,7 +4,7 @@ The bot can search Nathan's published writing: his newsletter and his posts on t
 
 ADR 0002 rejected retrieval for the Profile because a chunk that isn't retrieved looks like a fact that doesn't exist. That risk is smaller here. The Profile is still whole in every prompt, and a missed passage leaves the model where it would be without the writing: the Profile doesn't answer, so it offers a Handoff.
 
-The writing is a second source, below the Profile. The model attributes and dates what it uses from a post and never restates a post as a current fact about Nathan. Where a post and the Profile disagree, the Profile wins. The page lists the posts each search returned, taken from the tool's result, so the Visitor can check the source without relying on the model to cite it.
+The writing is a second source, below the Profile. The model attributes and dates what it uses from a post and never restates a post as a current fact about Nathan. Where a post and the Profile disagree, the Profile wins. The page lists the posts each search returned, taken from the tool's result, so the Visitor can check the post without relying on the model to cite it.
 
 ## Considered options
 
@@ -14,6 +14,6 @@ The writing is a second source, below the Profile. The model attributes and date
 ## Consequences
 
 - Posts that are personal, or job-search updates, are kept out by a list of slugs in `src/worker/writing.ts`, which Nathan reviews. A change takes effect on the next index run (`wrangler workflows trigger natbot-index`).
-- The Beeminder posts open with an introduction the blog's editors wrote. Each post is listed with the first sentence that is Nathan's, and indexing starts there.
+- The Beeminder posts open with an introduction the blog's editors wrote. Each post is listed with the first sentence that is Nathan's, and indexing starts there. If Beeminder rewords a post so that sentence no longer matches, the error reaches Sentry and the post keeps its existing vectors while the newsletter keeps updating. An empty newsletter feed fails the run rather than deleting every newsletter vector.
 - A question can take up to three model calls: a search, a draft, then the answer.
 - Evals build the same index in memory from the live posts, so they need no Vectorize access.

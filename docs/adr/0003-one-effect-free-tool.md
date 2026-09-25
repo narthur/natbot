@@ -10,6 +10,7 @@ Under Meta's "Rule of Two" (as covered in [Christopher Moravec's episode 59](htt
 ## Update (2026-09-25)
 
 The model now has a second tool, `searchWriting` (ADR 0006). It passes the Rule of Two:
+
 - it reads only Nathan's published writing, which is public
 - it takes no action
 

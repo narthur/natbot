@@ -2,7 +2,7 @@ import { instrumentWorkflowWithSentry } from "@sentry/cloudflare";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep, type WorkflowStepConfig } from "cloudflare:workers";
 import { createWorkersAI } from "workers-ai-provider";
 import { sentryOptions } from "./sentry";
-import { chunk, EMBEDDING_MODEL, embedChunks, fetchPosts, hash, type Manifest, postKey, staleIds } from "./writing";
+import { chunk, EMBEDDING_MODEL, embedChunks, fetchPosts, hash, type Manifest, postKey, staleIds, toVectors } from "./writing";
 
 const MANIFEST_KEY = "manifest";
 
@@ -13,8 +13,8 @@ const MANIFEST_KEY = "manifest";
 class WritingIndexWorkflow extends WorkflowEntrypoint<Env> {
   async run(_event: WorkflowEvent<unknown>, step: WorkflowStep) {
     const retry: WorkflowStepConfig = { retries: { limit: 3, delay: "1 minute", backoff: "exponential" }, timeout: "5 minutes" };
-    const posts = await step.do("fetch posts", retry, fetchPosts);
-    const before = await step.do("read manifest", async () => (await this.env.WRITING_INDEX.get<Manifest>(MANIFEST_KEY, "json")) ?? {});
+    const { posts, failed } = await step.do("fetch posts", retry, fetchPosts);
+    const before = await step.do("read manifest", retry, async () => (await this.env.WRITING_INDEX.get<Manifest>(MANIFEST_KEY, "json")) ?? {});
     const model = createWorkersAI({ binding: this.env.AI, gateway: { id: "natbot" } }).textEmbedding(EMBEDDING_MODEL);
 
     const after: Manifest = {};
@@ -27,12 +27,12 @@ class WritingIndexWorkflow extends WorkflowEntrypoint<Env> {
           : await step.do(`index ${postKey(post)}`, retry, async () => {
               const chunks = chunk(post);
               const vectors = await embedChunks(model, chunks);
-              await this.env.WRITING.upsert(
-                chunks.map(({ id, ...metadata }, i) => ({ id, values: vectors[i] ?? [], metadata })),
-              );
+              await this.env.WRITING.upsert(toVectors(chunks, vectors));
               return { hash: h, ids: chunks.map((c) => c.id) };
             });
     }
+    // A Beeminder post that couldn't be read this run keeps what's indexed for it, rather than being deleted.
+    for (const k of failed) if (before[k]) after[k] = before[k];
 
     const stale = staleIds(before, after);
     if (stale.length) await step.do("delete stale vectors", retry, async () => void (await this.env.WRITING.deleteByIds(stale)));

@@ -47,7 +47,8 @@ const searched = (p: Part) => {
 };
 
 /** Failed turns can leave assistant messages with nothing to show. */
-const hasContent = (m: UIMessage) => m.parts.some((p) => (p.type === "text" && p.text.trim()) || draft(p));
+const hasContent = (m: UIMessage) =>
+  m.parts.some((p) => (p.type === "text" && p.text.trim()) || draft(p) || (m.role === "assistant" && searched(p)));
 
 export function App() {
   const [name] = useState(conversationId);

@@ -2,7 +2,16 @@ import { writeFileSync } from "node:fs";
 import { createWorkersAI } from "workers-ai-provider";
 import { afterAll, describe, expect, test } from "vitest";
 import { answer, MODEL, MODEL_SETTINGS } from "../src/worker/answer";
-import { chunk, EMBEDDING_MODEL, embedChunks, fetchPosts, type Hit, type Nearest, searchWriting } from "../src/worker/writing";
+import {
+  chunk,
+  EMBEDDING_MODEL,
+  embedChunks,
+  fetchPosts,
+  type Hit,
+  inMemoryNearest,
+  type Nearest,
+  searchWriting,
+} from "../src/worker/writing";
 import { type Case, cases } from "./cases";
 import { credentials } from "./credentials";
 import { JUDGE_MODEL, judge } from "./judge";
@@ -13,7 +22,6 @@ const runs = Number(process.env.EVAL_RUNS ?? 1);
 const workersai = createWorkersAI(credentials());
 
 const embedder = workersai.textEmbedding(EMBEDDING_MODEL);
-const cosine = (a: number[], b: number[]) => a.reduce((s, x, i) => s + x * (b[i] ?? 0), 0) / Math.hypot(...a) / Math.hypot(...b);
 /**
  * The writing index, built in memory from the live posts with production's chunking and embeddings, so the eval
  * needs no Vectorize access. Built once, on the first search.
@@ -21,13 +29,8 @@ const cosine = (a: number[], b: number[]) => a.reduce((s, x, i) => s + x * (b[i]
 let index: Promise<Nearest> | undefined;
 const writingIndex = () =>
   (index ??= (async () => {
-    const chunks = (await fetchPosts()).flatMap(chunk);
-    const vectors = await embedChunks(embedder, chunks);
-    return async (vector: number[], topK: number) =>
-      chunks
-        .map((c, i) => ({ score: cosine(vector, vectors[i] ?? []), chunk: c }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, topK);
+    const chunks = (await fetchPosts()).posts.flatMap(chunk);
+    return inMemoryNearest(chunks, await embedChunks(embedder, chunks));
   })());
 
 type Outcome = { text: string; drafts: string[]; searched: Hit[] };
@@ -52,6 +55,10 @@ async function ask(c: Case): Promise<Outcome> {
     .map((line) => JSON.parse(line.slice("data: ".length)));
   const error = events.find((e) => e.type === "error");
   if (error) throw new Error(`answer stream failed: ${error.errorText}`);
+  // Output events carry only the call's id, so match them to the search calls.
+  const searchIds = new Set(
+    events.filter((e) => e.type === "tool-input-available" && e.toolName === "searchWriting").map((e) => e.toolCallId),
+  );
   return {
     text: events
       .filter((e) => e.type === "text-delta")
@@ -61,7 +68,7 @@ async function ask(c: Case): Promise<Outcome> {
       .filter((e) => e.type === "tool-input-available" && e.toolName === "draftHandoff")
       .map((e) => String(e.input?.question ?? "")),
     searched: events
-      .filter((e) => e.type === "tool-output-available" && Array.isArray(e.output))
+      .filter((e) => e.type === "tool-output-available" && searchIds.has(e.toolCallId))
       .flatMap((e) => e.output as Hit[]),
   };
 }
