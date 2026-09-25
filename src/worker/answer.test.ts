@@ -8,6 +8,7 @@ import {
   MAX_QUESTION_CHARS,
   MAX_STEPS,
   OFFERED_HANDOFF,
+  SEARCH_UNAVAILABLE,
   type Turn,
 } from "./answer";
 import type { Hit } from "./writing";
@@ -248,12 +249,12 @@ test("the model can search Nathan's writing; the results reach the model and the
   expect(turns).toEqual([{ question: "TDD?", answer: "In a 2024 newsletter post, Nathan wrote that tests matter more." }]);
 });
 
-test("a failed search gives the model no results instead of failing the answer, and logs no query text", async () => {
+test("a failed search tells the model the search is unavailable instead of failing the answer, and logs no query text", async () => {
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
   const model = steps([searchCall, toolFinish], [...say("His writing doesn't say."), stop]);
   const { deps } = setup({ model, searchWriting: vi.fn(async () => Promise.reject(new Error("no match for: What is his salary?"))) });
   const body = await (await answer([msg("user", "TDD?")], deps)).text();
-  expect(body).toContain('"output":[]');
+  expect(body).toContain(JSON.stringify(SEARCH_UNAVAILABLE));
   expect(body).toContain("His writing doesn't say.");
   // Only the name: the message can quote the Visitor's question.
   expect(error).toHaveBeenCalledWith("writing search failed", "Error");

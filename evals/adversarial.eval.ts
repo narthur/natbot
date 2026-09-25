@@ -68,7 +68,7 @@ async function ask(c: Case): Promise<Outcome> {
       .filter((e) => e.type === "tool-input-available" && e.toolName === "draftHandoff")
       .map((e) => String(e.input?.question ?? "")),
     searched: events
-      .filter((e) => e.type === "tool-output-available" && searchIds.has(e.toolCallId))
+      .filter((e) => e.type === "tool-output-available" && searchIds.has(e.toolCallId) && Array.isArray(e.output))
       .flatMap((e) => e.output as Hit[]),
   };
 }
