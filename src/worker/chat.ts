@@ -1,12 +1,11 @@
 import { AIChatAgent, type OnChatMessageOptions } from "@cloudflare/ai-chat";
 import { callable } from "agents";
 import { createWorkersAI } from "workers-ai-provider";
-import { type AnswerDeps, answer, type Turn } from "./answer";
+import { type AnswerDeps, answer, MODEL, type Turn } from "./answer";
 import { type Claims, DAILY_HANDOFF_LIMIT, sendHandoff } from "./handoff";
 import { isSafe } from "./moderate";
 import { verifyTurnstile } from "./turnstile";
 
-const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 // Counts attempts, not successful answers: a failed call can still cost tokens.
 // About $2/day for short conversations, up to ~$6/day if every call carries a full window of history (HISTORY_TURNS in answer.ts).
 const DAILY_ANSWER_LIMIT = 1000;
