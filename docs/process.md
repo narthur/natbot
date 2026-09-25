@@ -2,7 +2,7 @@
 
 natbot was built with [Claude Code](https://claude.com/claude-code), Anthropic's coding agent. [PROMPTS.md](../PROMPTS.md) holds every prompt Nathan typed. Those prompts are short because a lot of standing scaffolding sat around them, shaping what the agent did with each one. That scaffolding doesn't show up in the prompts, so it is described here.
 
-Division of labour: the agent wrote the code, ran the reviews and drove each PR until it was ready to merge. Nathan made the product and design decisions, set every secret himself (they were never pasted into the chat), and merged every PR. A hook stops the agent from merging on its own.
+Division of labour: the agent wrote the code, ran the reviews and drove each PR until it was ready to merge. Nathan made the product and design decisions, set every secret himself (they were never pasted into the chat), and merged every PR. A hook makes the agent ask for confirmation before merging a PR.
 
 ## Standing instructions
 
@@ -10,9 +10,10 @@ A private, global instruction file applies to every Claude Code session on Natha
 
 - **Calibrated help.** The agent judges how well Nathan knows the code being touched. Where he knows it, the agent just acts. Where he may not, it asks one short probe question (marked 🍎), either before acting when the stakes are high or after finishing when the question is only for his learning. Probes may draw on a list of concepts his Anki flashcard reviews show he keeps missing.
 - **Question markers.** 🔀 marks a decision that's Nathan's to make; 🍎 marks a probe. Nothing else gets an emoji, so the two can be told apart at a glance.
-- **Grilling.** Design interviews ask one question at a time, each with a recommended answer.
+- **Grilling.** Design interviews ask one question at a time.
 - **Past decisions on their merits.** When a change contradicts an earlier decision, the agent finds that decision's recorded reasoning and says whether it still holds, rather than arguing from who made it or from consistency.
-- **Voice.** Documents are written without referring to their author, and replies skip compliments.
+- **Voice.** Documents are written without referring to their author.
+- **Tone.** Replies skip compliments and lead with disagreement when there is some.
 - **Fieldnotes.** A shared Obsidian folder holds a running note for the project: goals, decisions with their reasoning and source, and status. The agent reads it before starting work and updates it afterwards, without being asked. It's private; the repo's [ADRs](adr/) and [CONTEXT.md](../CONTEXT.md) hold the parts that belong with the code.
 
 ## Skills
@@ -21,7 +22,7 @@ Skills are packaged playbooks the agent loads on demand, invoked by name (`/revi
 
 | Skill | What it did here | Source |
 | --- | --- | --- |
-| `grill-with-docs` (`grilling` + `domain-modeling`) | Ran the design interviews: the product itself, Handoffs, and the architecture follow-ups. Resolved terms went into the glossary ([CONTEXT.md](../CONTEXT.md)) as they settled, and hard-to-reverse choices became [ADRs](adr/). | local |
+| `grill-with-docs` (`grilling` + `domain-modeling`) | Ran the design interviews, one question at a time with a recommended answer for each: the product itself, Handoffs, and the architecture follow-ups. Resolved terms went into the glossary ([CONTEXT.md](../CONTEXT.md)) as they settled, and hard-to-reverse choices became [ADRs](adr/). | local |
 | `improve-codebase-architecture` + `codebase-design` | An architecture review that proposed deepening the answer flow into one tested module (PR #11) and led to ADR 0005 on where Turnstile sits. | local |
 | `review-loop` | The review every change went through before it was pushed. See below. | [narthur/skills](https://github.com/narthur/skills/tree/main/skills/review/review-loop) |
 | `code-analysis` | The deterministic half of review-loop: runs the analyzers that fit the repo (oxlint, Semgrep, gitleaks, markdownlint, accessibility checks and others), applies safe autofixes, and reports the rest. | [narthur/skills](https://github.com/narthur/skills/tree/main/skills/review/code-analysis) |
@@ -56,7 +57,7 @@ Hooks are scripts Claude Code runs at fixed points in a session.
 - **Guards** (global, on Nathan's machine). These put a human approval step back in front of risky actions, even in the agent's autonomous modes:
   - an **egress guard** on commands that can send data off the machine
   - a **sensitive-file guard** on edits to CI workflows, `.env` files and credentials
-  - a **merge guard** on merging pull requests
+  - a **merge guard** that asks for confirmation before merging a pull request
 
 ## Verification outside the agent
 
