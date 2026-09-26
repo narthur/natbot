@@ -535,3 +535,31 @@ Searched Nathan's writing
 </pasted_content id="1422">
 
 
+## 2026-09-26 17:23:28
+
+/grill-with-docs I'm not entirely satisfied with this solution.
+
+## 2026-09-26 17:24:40
+
+a and b, especially b
+
+## 2026-09-26 17:29:17
+
+If we limit number of turns per answer so low that it is frequently hit, as I expect we would in order to control cost, does that mean this is always going to be an issue, since we're effectively telling the agent it can take multiple turns and then cutting it off when it isn't finished? Do we need another approach in order to avoid this problem?
+
+## 2026-09-26 17:31:31
+
+Agree. And still allow the model to do follow-ups, but hopefully that will reduce the need.
+
+## 2026-09-26 17:32:38
+
+sounds good
+
+## 2026-09-26 17:33:12
+
+agree
+
+## 2026-09-26 17:34:22
+
+agree
+

@@ -5,6 +5,7 @@ import {
   answer,
   type AnswerDeps,
   HISTORY_TURNS,
+  LAST_STEP,
   MAX_QUESTION_CHARS,
   MAX_STEPS,
   OFFERED_HANDOFF,
@@ -240,13 +241,13 @@ test("after a draft the model can only write text, so a question gets at most on
   expect(model.doStreamCalls[1].tools ?? []).toHaveLength(0);
 });
 
-const searchCall = { type: "tool-call" as const, toolCallId: "s1", toolName: "searchWriting", input: '{"query":"TDD"}' };
+const searchCall = { type: "tool-call" as const, toolCallId: "s1", toolName: "searchWriting", input: '{"queries":["TDD"]}' };
 
 test("the model can search Nathan's writing; the results reach the model and the page, not the history", async () => {
   const model = steps([searchCall, toolFinish], [...say("In a 2024 newsletter post, Nathan wrote that tests matter more."), stop]);
   const { deps, turns } = setup({ model });
   const body = await (await answer([msg("user", "TDD?")], deps)).text();
-  expect(deps.searchWriting).toHaveBeenCalledWith("TDD");
+  expect(deps.searchWriting).toHaveBeenCalledWith(["TDD"]);
   expect(JSON.stringify(model.doStreamCalls[1].prompt)).toContain("Tests matter more when AI writes the code.");
   expect(body).toContain('"toolName":"searchWriting"');
   expect(body).toContain(hit.url);
@@ -264,16 +265,18 @@ test("a failed search tells the model the search is unavailable instead of faili
   expect(error).toHaveBeenCalledWith("writing search failed", "Error");
 });
 
-test("a question takes at most MAX_STEPS model calls: one search, then a draft, then only text", async () => {
-  const model = steps([searchCall, toolFinish], [toolCall, toolFinish], [...say("Done."), stop]);
+test("a search can be followed up; the last of MAX_STEPS calls is told it's the last and can still draft", async () => {
+  const model = steps([searchCall, toolFinish], [searchCall, toolFinish], [...say("Done."), stop]);
   const { deps } = setup({ model });
   await (await answer([msg("user", "q")], deps)).text();
   expect(model.doStreamCalls).toHaveLength(MAX_STEPS);
   expect(model.doStreamCalls.map((c) => (c.tools ?? []).map((t) => t.name))).toEqual([
     ["draftHandoff", "searchWriting"],
+    ["draftHandoff", "searchWriting"],
     ["draftHandoff"],
-    [],
   ]);
+  const system = model.doStreamCalls.map((c) => JSON.stringify(c.prompt[0]));
+  expect(system.map((s) => s.includes(LAST_STEP))).toEqual([false, false, true]);
 });
 
 test("a search followed by no answer and no draft gets the fallback, after what the model did write", async () => {
