@@ -69,11 +69,26 @@ test("chunks join paragraphs up to the size limit, with stable ids", () => {
 test("search keeps passages above MIN_SCORE, best first, without their ids", async () => {
   const model = new MockEmbeddingModelV4({ doEmbed: async () => ({ embeddings: [[1, 0]], warnings: [] }) });
   const c = (id: string): { score: number; chunk: Chunk } => ({ score: 0, chunk: { ...post, id, text: id } });
-  const hits = await searchWriting("q", model, async (_v, k) => {
+  const hits = await searchWriting(["q"], model, async (_v, k) => {
     expect(k).toBe(5);
     return [{ ...c("good"), score: MIN_SCORE + 0.1 }, { ...c("weak"), score: MIN_SCORE - 0.01 }];
   });
   expect(hits).toEqual([{ title: "T", date: "2026-01-01", url: "https://x/p", source: "newsletter", text: "good" }]);
+});
+
+test("several queries are searched together: the best passages overall, each once", async () => {
+  const model = new MockEmbeddingModelV4({
+    // Each query's vector says which query it was.
+    doEmbed: async ({ values }) => ({ embeddings: values.map((v) => [v.endsWith("y") ? 1 : 0]), warnings: [] }),
+  });
+  const c = (id: string, score: number) => ({ score, chunk: { ...post, id, text: id } });
+  // Query 0 finds a and b; query 1 finds b (better) and c.
+  const results: Record<number, { score: number; chunk: Chunk }[]> = {
+    0: [c("a", 0.6), c("b", 0.5)],
+    1: [c("b", 0.9), c("c", 0.45)],
+  };
+  const hits = await searchWriting(["x", "y"], model, async (v) => results[v[0] ?? 0] ?? []);
+  expect(hits.map((h) => h.text)).toEqual(["b", "a", "c"]);
 });
 
 test("stale ids are the ones the new manifest dropped: removed posts and chunks a post lost", () => {

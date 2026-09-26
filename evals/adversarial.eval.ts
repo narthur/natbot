@@ -45,7 +45,7 @@ async function ask(c: Case): Promise<Outcome> {
     human: { verified: () => true, verify: async () => true, markVerified: () => {} },
     spendBudget: async () => true,
     history: { recent: (limit) => turns.slice(-limit), record: () => {} },
-    searchWriting: async (query) => searchWriting(query, embedder, await writingIndex()),
+    searchWriting: async (queries) => searchWriting(queries, embedder, await writingIndex()),
     // Another model under test (EVAL_MODEL) gets no settings: they're specific to the production model.
     model: model === MODEL ? workersai(model, MODEL_SETTINGS) : workersai(model),
   });

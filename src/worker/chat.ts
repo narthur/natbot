@@ -59,7 +59,7 @@ class ChatAgent extends AIChatAgent<Env, ChatState> {
           recent: (limit) => this.recentTurns(limit),
           record: ({ question, answer }) => this.sql`INSERT INTO turns (question, answer) VALUES (${question}, ${answer})`,
         },
-        searchWriting: (query) => this.searchWriting(query),
+        searchWriting: (queries) => this.searchWriting(queries),
         model: this.workersAI()(MODEL, MODEL_SETTINGS),
       },
       { turnstileToken: typeof token === "string" ? token : undefined, abortSignal: options?.abortSignal },
@@ -90,8 +90,8 @@ class ChatAgent extends AIChatAgent<Env, ChatState> {
     return createWorkersAI({ binding: this.env.AI, gateway: { id: "natbot" } });
   }
 
-  private searchWriting(query: string) {
-    return searchWriting(query, this.workersAI().textEmbedding(EMBEDDING_MODEL), vectorizeNearest(this.env.WRITING));
+  private searchWriting(queries: string[]) {
+    return searchWriting(queries, this.workersAI().textEmbedding(EMBEDDING_MODEL), vectorizeNearest(this.env.WRITING));
   }
 
   private human(): AnswerDeps["human"] {

@@ -5,11 +5,13 @@ import {
   answer,
   type AnswerDeps,
   HISTORY_TURNS,
+  LAST_STEP,
   MAX_QUESTION_CHARS,
   MAX_STEPS,
   OFFERED_HANDOFF,
   SEARCH_UNAVAILABLE,
   type Turn,
+  UNFINISHED,
 } from "./answer";
 import type { Hit } from "./writing";
 
@@ -111,10 +113,11 @@ test("an exhausted budget stops the model call", async () => {
   expect(console.warn).toHaveBeenCalledWith("daily answer budget exhausted");
 });
 
-test("an empty answer is not recorded", async () => {
+test("an empty answer tells the Visitor it couldn't be finished, and history records the same", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
   const { deps, turns } = setup({ model: modelSaying("") });
-  await (await answer([msg("user", "q")], deps)).text();
-  expect(turns).toEqual([]);
+  expect(await (await answer([msg("user", "q")], deps)).text()).toContain(UNFINISHED);
+  expect(turns).toEqual([{ question: "q", answer: UNFINISHED }]);
 });
 
 test("a failed model call shows the visitor an apology and records nothing", async () => {
@@ -205,7 +208,7 @@ test("the model can offer a draft Handoff, which reaches the page as a tool part
   const model = steps([...say("The profile doesn't say."), toolCall, toolFinish], [stop]);
   const { deps, turns } = setup({ model });
   const body = await (await answer([msg("user", "Kafka?")], deps)).text();
-  expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't say." }]);
+  expect(turns).toEqual([{ question: "Kafka?", answer: `The profile doesn't say.\n\n${OFFERED_HANDOFF}` }]);
   expect(model.doStreamCalls[0].tools?.map((t) => t.name)).toEqual(["draftHandoff", "searchWriting"]);
   expect(body).toContain('"toolName":"draftHandoff"');
   expect(body).toContain('"output":{"drafted":true}');
@@ -217,14 +220,16 @@ test("after a draft, the model gets a second step to write its answer", async ()
   const body = await (await answer([msg("user", "Kafka?")], deps)).text();
   expect(model.doStreamCalls).toHaveLength(2);
   expect(body).toContain("The profile doesn't mention Kafka.");
-  expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't mention Kafka." }]);
+  expect(turns).toEqual([{ question: "Kafka?", answer: `The profile doesn't mention Kafka.\n\n${OFFERED_HANDOFF}` }]);
 });
 
 test("a draft offered without any text is still recorded, so history shows the question", async () => {
   const model = steps([toolCall, toolFinish], [stop]);
   const { deps, turns } = setup({ model });
-  await (await answer([msg("user", "Kafka?")], deps)).text();
+  const body = await (await answer([msg("user", "Kafka?")], deps)).text();
   expect(turns).toEqual([{ question: "Kafka?", answer: OFFERED_HANDOFF }]);
+  // The card answers for itself; no apology is added.
+  expect(body).not.toContain(UNFINISHED);
 });
 
 test("after a draft the model can only write text, so a question gets at most one card", async () => {
@@ -236,13 +241,13 @@ test("after a draft the model can only write text, so a question gets at most on
   expect(model.doStreamCalls[1].tools ?? []).toHaveLength(0);
 });
 
-const searchCall = { type: "tool-call" as const, toolCallId: "s1", toolName: "searchWriting", input: '{"query":"TDD"}' };
+const searchCall = { type: "tool-call" as const, toolCallId: "s1", toolName: "searchWriting", input: '{"queries":["TDD"]}' };
 
 test("the model can search Nathan's writing; the results reach the model and the page, not the history", async () => {
   const model = steps([searchCall, toolFinish], [...say("In a 2024 newsletter post, Nathan wrote that tests matter more."), stop]);
   const { deps, turns } = setup({ model });
   const body = await (await answer([msg("user", "TDD?")], deps)).text();
-  expect(deps.searchWriting).toHaveBeenCalledWith("TDD");
+  expect(deps.searchWriting).toHaveBeenCalledWith(["TDD"]);
   expect(JSON.stringify(model.doStreamCalls[1].prompt)).toContain("Tests matter more when AI writes the code.");
   expect(body).toContain('"toolName":"searchWriting"');
   expect(body).toContain(hit.url);
@@ -260,10 +265,49 @@ test("a failed search tells the model the search is unavailable instead of faili
   expect(error).toHaveBeenCalledWith("writing search failed", "Error");
 });
 
-test("a question takes at most MAX_STEPS model calls, and the last one can only write text", async () => {
-  const model = steps(...Array.from({ length: MAX_STEPS - 1 }, () => [searchCall, toolFinish]), [...say("Done."), stop]);
+test("a search can be followed up; the last of MAX_STEPS calls is told it's the last and can still draft", async () => {
+  const model = steps([searchCall, toolFinish], [searchCall, toolFinish], [...say("Done."), stop]);
   const { deps } = setup({ model });
   await (await answer([msg("user", "q")], deps)).text();
   expect(model.doStreamCalls).toHaveLength(MAX_STEPS);
-  expect(model.doStreamCalls.at(-1)?.tools ?? []).toHaveLength(0);
+  expect(model.doStreamCalls.map((c) => (c.tools ?? []).map((t) => t.name))).toEqual([
+    ["draftHandoff", "searchWriting"],
+    ["draftHandoff", "searchWriting"],
+    ["draftHandoff"],
+  ]);
+  const system = model.doStreamCalls.map((c) => JSON.stringify(c.prompt[0]));
+  expect(system.map((s) => s.includes(LAST_STEP))).toEqual([false, false, true]);
+});
+
+test("a search followed by no answer and no draft gets the fallback, after what the model did write", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const model = steps([...say("Let me check his posts."), searchCall, toolFinish], [stop]);
+  const { deps, turns } = setup({ model });
+  const body = await (await answer([msg("user", "Recent thoughts?")], deps)).text();
+  expect(body.indexOf(UNFINISHED)).toBeGreaterThan(body.indexOf("Let me check his posts."));
+  expect(body.indexOf(UNFINISHED)).toBeLessThan(body.lastIndexOf('"type":"finish"'));
+  expect(turns).toEqual([{ question: "Recent thoughts?", answer: `Let me check his posts.\n\n${UNFINISHED}` }]);
+  expect(warn).toHaveBeenCalledWith("model stopped without an answer");
+});
+
+test("an answer the model finished gets no fallback", async () => {
+  const model = steps([searchCall, toolFinish], [...say("He wrote about TDD."), stop]);
+  const { deps } = setup({ model });
+  expect(await (await answer([msg("user", "TDD?")], deps)).text()).not.toContain(UNFINISHED);
+});
+
+test("a model error mid-answer shows its own apology, not the unfinished one too", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const model = steps([{ type: "error" as const, error: new Error("connection lost") }]);
+  const { deps } = setup({ model });
+  const body = await (await answer([msg("user", "q")], deps)).text();
+  expect(body).toContain("Sorry, something went wrong");
+  expect(body).not.toContain(UNFINISHED);
+});
+
+test("a draft on the last step after a preamble is recorded with the preamble", async () => {
+  const model = steps([...say("Let me check his posts."), searchCall, toolFinish], [searchCall, toolFinish], [toolCall, toolFinish]);
+  const { deps, turns } = setup({ model });
+  await (await answer([msg("user", "Kafka?")], deps)).text();
+  expect(turns).toEqual([{ question: "Kafka?", answer: `Let me check his posts.\n\n${OFFERED_HANDOFF}` }]);
 });

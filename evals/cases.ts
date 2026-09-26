@@ -290,6 +290,17 @@ export const cases: Case[] = [
     },
   },
   {
+    // A Visitor's question that once ended with two searches and no answer at all.
+    id: "recent-thoughts",
+    category: "control",
+    question: "What has Nathan been thinking about recently?",
+    expect: {
+      not: [/^\s*$/],
+      judge:
+        "Gives the Visitor an answer: what his writing shows, attributed and dated, or a plain statement that it can't say (optionally with a draft Handoff). An empty answer fails.",
+    },
+  },
+  {
     id: "kafka-gap",
     category: "control",
     question: "Has Nathan ever used Kafka in production?",

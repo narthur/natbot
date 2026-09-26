@@ -507,3 +507,59 @@ Did you figure out why the drop? If it's also not doing a search, just search ex
 
 All done, merged, deployed, and job triggered. Let's create a new pr that gives users a way to reset the conversation if they'd like to start fresh.
 
+## 2026-09-25 17:41:09
+
+How does tool use work? If the agent says something, then calls a tool, is it able to say something again after the tool call?
+
+## 2026-09-25 17:41:56
+
+Fresh conversation, I got this. It searched my writings and then idn't say anything.
+
+
+
+<pasted_content id="1422">
+Q.You asked:
+
+What has Nathan been thinking about recently?
+A.Answer:
+
+The profile shows his stable views, but not what he's been writing about recently. Let me check his recent posts.
+
+Searched Nathan's writing
+
+    On Writing Publicly (newsletter, 2025-06-20)
+
+Searched Nathan's writing
+
+    Writing with AI, Responsibly (newsletter, 2026-03-11)
+</pasted_content id="1422">
+
+
+## 2026-09-26 17:23:28
+
+/grill-with-docs I'm not entirely satisfied with this solution.
+
+## 2026-09-26 17:24:40
+
+a and b, especially b
+
+## 2026-09-26 17:29:17
+
+If we limit number of turns per answer so low that it is frequently hit, as I expect we would in order to control cost, does that mean this is always going to be an issue, since we're effectively telling the agent it can take multiple turns and then cutting it off when it isn't finished? Do we need another approach in order to avoid this problem?
+
+## 2026-09-26 17:31:31
+
+Agree. And still allow the model to do follow-ups, but hopefully that will reduce the need.
+
+## 2026-09-26 17:32:38
+
+sounds good
+
+## 2026-09-26 17:33:12
+
+agree
+
+## 2026-09-26 17:34:22
+
+agree
+

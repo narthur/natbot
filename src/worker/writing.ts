@@ -1,4 +1,4 @@
-import { type EmbeddingModel, embed, embedMany } from "ai";
+import { type EmbeddingModel, embedMany } from "ai";
 
 /**
  * Nathan's published writing, which the model can search (issue #28, ADR 0006): his newsletter and his Beeminder
@@ -181,11 +181,19 @@ export const inMemoryNearest =
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
 
-/** Passages of Nathan's writing relevant to `query`, best first. */
-export async function searchWriting(query: string, model: EmbeddingModel, nearest: Nearest): Promise<Hit[]> {
-  const { embedding } = await embed({ model, value: QUERY_PREFIX + query });
-  return (await nearest(embedding, SEARCH_RESULTS))
+/**
+ * Passages of Nathan's writing relevant to any of `queries`, searched together: the best SEARCH_RESULTS passages
+ * overall, each once, best first.
+ */
+export async function searchWriting(queries: string[], model: EmbeddingModel, nearest: Nearest): Promise<Hit[]> {
+  const { embeddings } = await embedMany({ model, values: queries.map((q) => QUERY_PREFIX + q) });
+  const matches = (await Promise.all(embeddings.map((e) => nearest(e, SEARCH_RESULTS))))
+    .flat()
     .filter((m) => m.score >= MIN_SCORE)
+    .sort((a, b) => b.score - a.score);
+  return matches
+    .filter((m, i) => matches.findIndex((n) => n.chunk.id === m.chunk.id) === i)
+    .slice(0, SEARCH_RESULTS)
     .map(({ chunk: { title, date, url, source, text } }) => ({ title, date, url, source, text }));
 }
 
