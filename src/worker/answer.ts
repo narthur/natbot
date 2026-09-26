@@ -153,11 +153,11 @@ export async function answer(
     abortSignal,
     onFinish: ({ steps }) => {
       // `text` would be only the last step's, so join every step's, plus the fallback the Visitor saw, so a
-      // preamble like "Let me check his posts." isn't replayed as a finished answer. If the model offered a draft
-      // without writing anything, record that, so history and Handoff emails still show the question.
+      // preamble like "Let me check his posts." isn't replayed as a finished answer. If the model offered a draft,
+      // record that too, so history and Handoff emails show the question went to Nathan.
       const text = [...steps.map((s) => s.text.trim()), unfinished(steps) ? UNFINISHED : ""].filter(Boolean).join("\n\n");
       const offered = steps.some((s) => s.toolCalls.some((c) => c.toolName === "draftHandoff"));
-      const recorded = text || (offered ? OFFERED_HANDOFF : "");
+      const recorded = [text, offered ? OFFERED_HANDOFF : ""].filter(Boolean).join("\n\n");
       if (recorded) deps.history.record({ question, answer: recorded });
     },
   });

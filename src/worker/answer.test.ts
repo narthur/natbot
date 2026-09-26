@@ -208,7 +208,7 @@ test("the model can offer a draft Handoff, which reaches the page as a tool part
   const model = steps([...say("The profile doesn't say."), toolCall, toolFinish], [stop]);
   const { deps, turns } = setup({ model });
   const body = await (await answer([msg("user", "Kafka?")], deps)).text();
-  expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't say." }]);
+  expect(turns).toEqual([{ question: "Kafka?", answer: `The profile doesn't say.\n\n${OFFERED_HANDOFF}` }]);
   expect(model.doStreamCalls[0].tools?.map((t) => t.name)).toEqual(["draftHandoff", "searchWriting"]);
   expect(body).toContain('"toolName":"draftHandoff"');
   expect(body).toContain('"output":{"drafted":true}');
@@ -220,7 +220,7 @@ test("after a draft, the model gets a second step to write its answer", async ()
   const body = await (await answer([msg("user", "Kafka?")], deps)).text();
   expect(model.doStreamCalls).toHaveLength(2);
   expect(body).toContain("The profile doesn't mention Kafka.");
-  expect(turns).toEqual([{ question: "Kafka?", answer: "The profile doesn't mention Kafka." }]);
+  expect(turns).toEqual([{ question: "Kafka?", answer: `The profile doesn't mention Kafka.\n\n${OFFERED_HANDOFF}` }]);
 });
 
 test("a draft offered without any text is still recorded, so history shows the question", async () => {
@@ -303,4 +303,11 @@ test("a model error mid-answer shows its own apology, not the unfinished one too
   const body = await (await answer([msg("user", "q")], deps)).text();
   expect(body).toContain("Sorry, something went wrong");
   expect(body).not.toContain(UNFINISHED);
+});
+
+test("a draft on the last step after a preamble is recorded with the preamble", async () => {
+  const model = steps([...say("Let me check his posts."), searchCall, toolFinish], [searchCall, toolFinish], [toolCall, toolFinish]);
+  const { deps, turns } = setup({ model });
+  await (await answer([msg("user", "Kafka?")], deps)).text();
+  expect(turns).toEqual([{ question: "Kafka?", answer: `Let me check his posts.\n\n${OFFERED_HANDOFF}` }]);
 });
