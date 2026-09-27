@@ -4,10 +4,10 @@ import {
   beeminderText,
   type Chunk,
   chunk,
-  EXCLUDED,
   fetchPosts,
   hash,
   htmlToText,
+  INCLUDED,
   inMemoryNearest,
   keepFailed,
   type Manifest,
@@ -22,7 +22,7 @@ import {
 
 
 const feed = `<?xml version="1.0"?><rss><channel><title>Narthur Online</title>
-<item><title>Is Test-Driven Development Dead?</title><link>https://nathanarthur.com/writing/is-tdd-dead</link>
+<item><title>Is Test-Driven Development Dead?</title><link>https://nathanarthur.com/writing/is-test-driven-development-dead</link>
 <pubDate>Sun, 20 Sep 2026 10:16:00 GMT</pubDate><content:encoded>&lt;figure&gt;&lt;img src=&quot;x.webp&quot;&gt;&lt;/figure&gt;
 &lt;p&gt;Tests &amp;amp; AI.&lt;/p&gt;&lt;p&gt;It&amp;#8217;s   &lt;em&gt;complicated&lt;/em&gt;.&lt;/p&gt;</content:encoded></item>
 </channel></rss>`;
@@ -31,10 +31,10 @@ test("the feed's posts come out as plain text, with a date and slug", () => {
   expect(parseFeed(feed)).toEqual([
     {
       source: "newsletter",
-      slug: "is-tdd-dead",
+      slug: "is-test-driven-development-dead",
       title: "Is Test-Driven Development Dead?",
       date: "2026-09-20",
-      url: "https://nathanarthur.com/writing/is-tdd-dead",
+      url: "https://nathanarthur.com/writing/is-test-driven-development-dead",
       text: "Tests & AI.\n\nIt’s complicated.",
     },
   ]);
@@ -49,11 +49,6 @@ test("a Beeminder post starts at Nathan's first sentence, after the editors' int
   expect(beeminderText(page, "So many tasks")).toBe("So many tasks, so little time.\n\nMore.");
   expect(() => beeminderText(page, "missing")).toThrow("start sentence not found");
   expect(() => beeminderText("<p>So many tasks.</p>", "So many tasks")).toThrow("tag list not found");
-});
-
-test("job-search updates and personal posts are excluded", () => {
-  expect(EXCLUDED.has("the-job-search-begins")).toBe(true);
-  expect(EXCLUDED.has("surfing-your-motivation")).toBe(true);
 });
 
 const post: Post = { source: "newsletter", slug: "p", title: "T", date: "2026-01-01", url: "https://x/p", text: "" };
@@ -111,10 +106,11 @@ function stubSite(feedXml: string) {
   );
 }
 
-test("fetchPosts drops excluded newsletter posts and keeps the Beeminder posts", async () => {
-  stubSite(feed.replace("<item>", "<item><title>Job</title><link>https://nathanarthur.com/writing/the-job-search-begins</link><pubDate>Sun, 20 Sep 2026 10:16:00 GMT</pubDate><content:encoded>x</content:encoded></item><item>"));
+test("fetchPosts keeps only included newsletter posts, so a new one stays out until it's listed, and the Beeminder posts", async () => {
+  expect(INCLUDED.has("a-brand-new-post")).toBe(false);
+  stubSite(feed.replace("<item>", "<item><title>New</title><link>https://nathanarthur.com/writing/a-brand-new-post</link><pubDate>Sun, 20 Sep 2026 10:16:00 GMT</pubDate><content:encoded>x</content:encoded></item><item>"));
   const { posts, failed } = await fetchPosts();
-  expect(posts.map((p) => `${p.source}:${p.slug}`)).toEqual(["newsletter:is-tdd-dead", "beeminder:taskratchet", "beeminder:astroblog"]);
+  expect(posts.map((p) => `${p.source}:${p.slug}`)).toEqual(["newsletter:is-test-driven-development-dead", "beeminder:taskratchet", "beeminder:astroblog"]);
   expect(failed).toEqual([]);
 });
 
@@ -131,7 +127,7 @@ test("a Beeminder post that can't be read is reported as failed without failing 
     ),
   );
   const { posts, failed } = await fetchPosts();
-  expect(posts.map((p) => p.slug)).toEqual(["is-tdd-dead", "taskratchet"]);
+  expect(posts.map((p) => p.slug)).toEqual(["is-test-driven-development-dead", "taskratchet"]);
   expect(failed).toEqual(["beeminder:astroblog"]);
   expect(error).toHaveBeenCalledWith("couldn't read a beeminder post", expect.any(Error));
 });
