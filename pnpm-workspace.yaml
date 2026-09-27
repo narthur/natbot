@@ -1,0 +1,4 @@
+# `workerd` is a separate workspace package (not just a folder) so its `vitest` install can stay pinned to the
+# major @cloudflare/vitest-pool-workers actually supports, independent of the root project's `vitest` (issue #12).
+packages:
+  - "workerd"
