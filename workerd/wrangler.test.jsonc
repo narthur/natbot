@@ -9,8 +9,9 @@
   "compatibility_flags": ["nodejs_compat"],
   // Only the bindings the Conversation Durable Object adapter tests touch (workerd/chat.do.ts). No `ai`,
   // `vectorize`, `kv_namespaces` or `workflows`: those are exercised by `answer()`'s plain-Node tests
-  // (src/worker/answer.test.ts) and would otherwise try a real remote connection (wrangler.jsonc marks them
-  // `remote: true`) just to start the worker.
+  // (src/worker/answer.test.ts) instead. `ai`/`vectorize` would otherwise try a real remote connection
+  // (wrangler.jsonc marks them `remote: true`) just to start the worker; `kv_namespaces`/`workflows` carry
+  // no such flag, they're simply unneeded here.
   "durable_objects": {
     "bindings": [
       { "name": "ChatAgent", "class_name": "ChatAgent" },

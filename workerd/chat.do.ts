@@ -13,6 +13,7 @@ const FORGET_AFTER_SECONDS = 30 * 24 * 60 * 60;
 type ChatAgentInternals = {
   onStart(): Promise<void>;
   forget(): Promise<void>;
+  forgetLater(): Promise<void>;
   recentTurns(limit: number): Turn[];
   sql<T = Record<string, unknown>>(strings: TemplateStringsArray, ...values: (string | number | boolean | null)[]): T[];
   listSchedules(): Promise<{ id: string; callback: string; time: number }[]>;
@@ -107,6 +108,31 @@ test("onStart never arms a second forget schedule", async () => {
     await chat.onStart();
     const forgets = (await chat.listSchedules()).filter((s) => s.callback === "forget");
     expect(forgets).toHaveLength(1);
+  });
+});
+
+test("forgetLater reschedules forget to FORGET_AFTER_SECONDS from now, without duplicating the schedule", async () => {
+  // This is the mechanism onChatMessage calls on every non-continuation message (chat.ts) — the one that
+  // makes a Conversation forgotten 30 days after its LATEST question, rather than 30 days after it started.
+  const stub = env.ChatAgent.getByName(conversationName());
+  await runInDurableObject(stub, async (instance) => {
+    const chat = instance as unknown as ChatAgentInternals;
+    await chat.onStart();
+    // Move the schedule onStart armed into the near past, so a real reschedule is observable rather than a
+    // no-op that happens to land in the same place.
+    for (const s of (await chat.listSchedules()).filter((s) => s.callback === "forget")) {
+      await chat.cancelSchedule(s.id);
+    }
+    await chat.schedule(60, "forget");
+
+    const before = Date.now() / 1000;
+    await chat.forgetLater();
+
+    // Exactly one schedule survives: forgetLater cancels the old one before arming the new one.
+    const forgets = (await chat.listSchedules()).filter((s) => s.callback === "forget");
+    expect(forgets).toHaveLength(1);
+    expect(forgets[0].time).toBeGreaterThanOrEqual(before + FORGET_AFTER_SECONDS - 5);
+    expect(forgets[0].time).toBeLessThanOrEqual(before + FORGET_AFTER_SECONDS + 5);
   });
 });
 
