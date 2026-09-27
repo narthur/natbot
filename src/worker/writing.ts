@@ -18,25 +18,64 @@ export const MIN_SCORE = 0.4;
 const CHUNK_CHARS = 1200;
 
 /**
- * Newsletter posts left out: personal, or not about work, or job-search updates that a recruiter-facing bot
- * shouldn't quote. Nathan reviews this list; a change takes effect on the next index run.
+ * Newsletter posts to index, by slug: ones about work that a recruiter-facing bot can quote. A new post stays out
+ * until it's added here, so a personal or job-search post is never indexed by default. Nathan reviews this list; a
+ * change takes effect on the next index run.
  */
-export const EXCLUDED = new Set([
-  "long-distance-friends",
-  "alternatives-to-the-big-social-networks",
-  "rethinking-social-networks",
-  "consciousness-is-a-rounding-error",
-  "are-llms-conscious",
-  "pretentious-self-indulgent-navel",
-  "surfing-your-motivation",
-  "goodbye-substack",
-  "changing-my-approach-to-writing",
-  "the-job-search-begins",
-  "job-search-coaching-hand-writing",
-  "job-search-update-giving-up-on-ai",
-  "longer-resumes-used-phones-and-legos",
-  "stream-of-thought-with-stakes",
-  "what-is-good-writing",
+export const INCLUDED = new Set([
+  "hills-to-die-on",
+  "words-in-mouths",
+  "why-im-leaving-rendercom",
+  "the-limits-of-vibe-coding",
+  "github-cli-alias-to-prep-git-for",
+  "tips-for-effective-skill-design",
+  "finding-clients-in-the-age-of-ai",
+  "minimax-m27-openais-symphony-etc",
+  "business-incentives-of-ai-token-pricing",
+  "i-am-no-longer-a-programmer",
+  "taskratchet-database-switch-making",
+  "state-of-the-workflow-ai-for-client",
+  "writing-with-ai-responsibly",
+  "skills-bills-and-aligning-incentives",
+  "vibe-kanban-claude-code-skills-dotfiles",
+  "experimenting-with-vibe-kanban",
+  "my-ai-illustration-workflow",
+  "new-buzz-functionality-terminal-screenshots",
+  "claude-cowork-links-roundup",
+  "solution-for-large-branches-gitbutler",
+  "iterating-on-a-pr-extraction-workflow",
+  "fast-pr-feedback-review-with-saved",
+  "i-cant-wait-for-remix-3",
+  "publishing-my-dotfiles",
+  "digital-employees",
+  "choosing-a-laptop-updating-buzz-etc",
+  "adding-sentry-and-neon-to-taskratchet",
+  "ai-as-slot-machine-programming",
+  "taskratchet-bugs-cursor-2-and-rails",
+  "taskratchet-on-cloudflare-cursor",
+  "buzz-updates-monorepos-and-ai-dev",
+  "buzz-a-terminal-interface-for-beeminder",
+  "terminal-first-dev-and-a-few-interesting",
+  "spec-driven-dev-tuis-etc",
+  "link-roundup-taskratchet-api-update",
+  "labor-day-update-link-roundup",
+  "ai-for-code-review-coderabbit",
+  "toward-ai-friendly-software-architecture",
+  "links-measuring-ais-impact-on-productivity",
+  "ai-for-coding-collaborate-or-delegate",
+  "future-changes-to-taskratchet",
+  "agentic-coding-tool-failure-modes",
+  "the-tools-im-using",
+  "on-writing-publicly",
+  "ai-after-tdd-pt-3-preserving-risk",
+  "ai-after-tdd-keeping-test-coverage",
+  "is-test-driven-development-dead",
+  "ensuring-code-quality-in-the-age-of-ai",
+  "will-ai-make-us-all-managers",
+  "limiting-fixed-bid-contract-risk",
+  "zed-vs-vs-code-cursor",
+  "ai-for-business-data-using-ai-coding-tools-responsibly",
+  "issue-0",
 ]);
 
 /**
@@ -115,14 +154,14 @@ async function get(url: string): Promise<string> {
 }
 
 /**
- * Every Post to index, fetched live, without the excluded ones. A Beeminder post that can't be fetched or read is
+ * Every Post to index, fetched live: the included newsletter posts and the Beeminder posts. A Beeminder post that can't be fetched or read is
  * listed in `failed` (by postKey) instead of failing the rest; the newsletter feed failing fails the whole fetch.
  */
 export async function fetchPosts(): Promise<{ posts: Post[]; failed: string[] }> {
   const feed = parseFeed(await get(FEED));
   // An empty feed is a broken response, not a newsletter with no posts: indexing it would delete every vector.
   if (!feed.length) throw new Error("newsletter feed has no posts");
-  const newsletter = feed.filter((p) => !EXCLUDED.has(p.slug));
+  const newsletter = feed.filter((p) => INCLUDED.has(p.slug));
   const beeminder = await Promise.allSettled(
     BEEMINDER_POSTS.map(async ({ slug, title, date, start }) => {
       const url = `https://blog.beeminder.com/${slug}/`;
@@ -217,7 +256,7 @@ export const keepFailed = (before: Manifest, indexed: Manifest, failed: string[]
   ...indexed,
 });
 
-/** Vector ids the old manifest has that the new one doesn't: Posts that were removed or excluded, and chunks a shorter Post no longer has. */
+/** Vector ids the old manifest has that the new one doesn't: Posts that were removed or taken off INCLUDED, and chunks a shorter Post no longer has. */
 export function staleIds(before: Manifest, after: Manifest): string[] {
   const kept = new Set(Object.values(after).flatMap((e) => e.ids));
   return Object.values(before).flatMap((e) => e.ids.filter((id) => !kept.has(id)));

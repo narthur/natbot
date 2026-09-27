@@ -13,7 +13,7 @@ The writing is a second source, below the Profile. The model attributes and date
 
 ## Consequences
 
-- Posts that are personal, or job-search updates, are kept out by a list of slugs in `src/worker/writing.ts`, which Nathan reviews. A change takes effect on the next index run (`wrangler workflows trigger natbot-index`).
+- Only newsletter posts on a list of slugs in `src/worker/writing.ts` are indexed, so a new post stays out until Nathan adds it; personal posts and job-search updates are never indexed by default. A change takes effect on the next index run (`wrangler workflows trigger natbot-index`).
 - The Beeminder posts open with an introduction the blog's editors wrote. Each post is listed with the first sentence that is Nathan's, and indexing starts there. If Beeminder rewords a post so that sentence no longer matches, the error reaches Sentry and the post keeps its existing vectors while the newsletter keeps updating. An empty newsletter feed fails the run rather than deleting every newsletter vector.
 - A question can take up to three model calls. One search takes up to three queries at once, and follow-up searches are allowed. The last call is told it is the last: it must answer, or say so and offer a draft, rather than silently losing its tools.
 - Evals build the same index in memory from the live posts, so they need no Vectorize access.

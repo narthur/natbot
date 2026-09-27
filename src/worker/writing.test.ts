@@ -4,10 +4,10 @@ import {
   beeminderText,
   type Chunk,
   chunk,
-  EXCLUDED,
   fetchPosts,
   hash,
   htmlToText,
+  INCLUDED,
   inMemoryNearest,
   keepFailed,
   type Manifest,
@@ -51,9 +51,8 @@ test("a Beeminder post starts at Nathan's first sentence, after the editors' int
   expect(() => beeminderText("<p>So many tasks.</p>", "So many tasks")).toThrow("tag list not found");
 });
 
-test("job-search updates and personal posts are excluded", () => {
-  expect(EXCLUDED.has("the-job-search-begins")).toBe(true);
-  expect(EXCLUDED.has("surfing-your-motivation")).toBe(true);
+test("personal posts and job-search updates aren't on the list", () => {
+  for (const slug of ["the-job-search-begins", "surfing-your-motivation", "long-distance-friends"]) expect(INCLUDED.has(slug)).toBe(false);
 });
 
 const post: Post = { source: "newsletter", slug: "p", title: "T", date: "2026-01-01", url: "https://x/p", text: "" };
@@ -100,6 +99,10 @@ test("stale ids are the ones the new manifest dropped: removed posts and chunks 
 afterEach(() => vi.unstubAllGlobals());
 
 /** Serves the feed and each Beeminder post's page from memory. */
+// Any listed slug, so the fetchPosts tests don't depend on one particular post staying on the list.
+const listed = [...INCLUDED][0] ?? "";
+const listedFeed = feed.replaceAll("is-tdd-dead", listed);
+
 function stubSite(feedXml: string) {
   vi.stubGlobal(
     "fetch",
@@ -111,10 +114,11 @@ function stubSite(feedXml: string) {
   );
 }
 
-test("fetchPosts drops excluded newsletter posts and keeps the Beeminder posts", async () => {
-  stubSite(feed.replace("<item>", "<item><title>Job</title><link>https://nathanarthur.com/writing/the-job-search-begins</link><pubDate>Sun, 20 Sep 2026 10:16:00 GMT</pubDate><content:encoded>x</content:encoded></item><item>"));
+test("fetchPosts keeps only included newsletter posts, so a new one stays out until it's listed, and the Beeminder posts", async () => {
+  expect(INCLUDED.has("a-brand-new-post")).toBe(false);
+  stubSite(listedFeed.replace("<item>", "<item><title>New</title><link>https://nathanarthur.com/writing/a-brand-new-post</link><pubDate>Sun, 20 Sep 2026 10:16:00 GMT</pubDate><content:encoded>x</content:encoded></item><item>"));
   const { posts, failed } = await fetchPosts();
-  expect(posts.map((p) => `${p.source}:${p.slug}`)).toEqual(["newsletter:is-tdd-dead", "beeminder:taskratchet", "beeminder:astroblog"]);
+  expect(posts.map((p) => `${p.source}:${p.slug}`)).toEqual([`newsletter:${listed}`, "beeminder:taskratchet", "beeminder:astroblog"]);
   expect(failed).toEqual([]);
 });
 
@@ -124,14 +128,14 @@ test("a Beeminder post that can't be read is reported as failed without failing 
     "fetch",
     vi.fn(async (url: string) =>
       url.endsWith("rss.xml")
-        ? new Response(feed)
+        ? new Response(listedFeed)
         : url.includes("astroblog")
           ? new Response("gone", { status: 404 })
           : new Response("<p>So many tasks, so little time.</p><div>Tags: x</div>"),
     ),
   );
   const { posts, failed } = await fetchPosts();
-  expect(posts.map((p) => p.slug)).toEqual(["is-tdd-dead", "taskratchet"]);
+  expect(posts.map((p) => p.slug)).toEqual([listed, "taskratchet"]);
   expect(failed).toEqual(["beeminder:astroblog"]);
   expect(error).toHaveBeenCalledWith("couldn't read a beeminder post", expect.any(Error));
 });

@@ -563,3 +563,11 @@ agree
 
 agree
 
+## 2026-09-27 09:17:32
+
+I've reconsidered. For the blog import, I think it should be a list of whitelisted urls, not a blacklist. That way if I don't keep up with it, off-topic stuff doesn't get auto-added.
+
+## 2026-09-27 09:19:13
+
+Create pr and drive to mergable
+
