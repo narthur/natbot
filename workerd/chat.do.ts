@@ -38,6 +38,13 @@ function record(chat: ChatAgentInternals, turn: Turn) {
   chat.sql`INSERT INTO turns (question, answer) VALUES (${turn.question}, ${turn.answer})`;
 }
 
+async function forgetInSixtySeconds(chat: ChatAgentInternals) {
+  for (const s of (await chat.listSchedules()).filter((s) => s.callback === "forget")) {
+    await chat.cancelSchedule(s.id);
+  }
+  await chat.schedule(60, "forget");
+}
+
 test("onStart creates the turns table with question and answer columns", async () => {
   const stub = env.ChatAgent.getByName(conversationName());
   await runInDurableObject(stub, async (instance) => {
@@ -118,12 +125,9 @@ test("forgetLater reschedules forget to FORGET_AFTER_SECONDS from now, without d
   await runInDurableObject(stub, async (instance) => {
     const chat = instance as unknown as ChatAgentInternals;
     await chat.onStart();
-    // Move the schedule onStart armed into the near past, so a real reschedule is observable rather than a
-    // no-op that happens to land in the same place.
-    for (const s of (await chat.listSchedules()).filter((s) => s.callback === "forget")) {
-      await chat.cancelSchedule(s.id);
-    }
-    await chat.schedule(60, "forget");
+    // Pull the schedule onStart armed (30 days out) in to 60 seconds, so a real reschedule back to 30 days is
+    // observable rather than a no-op that happens to land in the same place.
+    await forgetInSixtySeconds(chat);
 
     const before = Date.now() / 1000;
     await chat.forgetLater();
@@ -159,12 +163,9 @@ test("the forget schedule firing destroys the Conversation the same way", async 
     const chat = instance as unknown as ChatAgentInternals;
     await chat.onStart();
     record(chat, { question: "q", answer: "a" });
-    // Move the 30-day forget schedule onStart armed up to fire soon, the same way forgetLater() moves it
-    // earlier (cancel, then reschedule) — so the alarm can be run without waiting 30 days for real.
-    for (const s of (await chat.listSchedules()).filter((s) => s.callback === "forget")) {
-      await chat.cancelSchedule(s.id);
-    }
-    await chat.schedule(60, "forget");
+    // Move the 30-day forget schedule onStart armed up to fire soon, so the alarm can be run without waiting
+    // 30 days for real.
+    await forgetInSixtySeconds(chat);
   });
 
   // Fast-forward past the schedule's due time, then let the alarm actually run it (agents' job queue only

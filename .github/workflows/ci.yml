@@ -40,3 +40,6 @@ jobs:
 
       - name: Test workerd
         run: pnpm test:workerd
+
+      - name: Typecheck workerd
+        run: pnpm exec tsc -p workerd --noEmit

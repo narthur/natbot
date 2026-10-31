@@ -1,4 +1,6 @@
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+// This package's own `agents` devDependency supplies only the `agents/vite` plugin; the code under test
+// (../src/worker/chat.ts) resolves `agents` from the root install, i.e. the version production uses.
 import agents from "agents/vite";
 import { defineConfig } from "vitest/config";
 
