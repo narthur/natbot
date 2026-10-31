@@ -1,0 +1,13 @@
+{
+  "name": "natbot-workerd-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "agents": "^0.24.0",
+    "vitest": "4.1.11"
+  }
+}

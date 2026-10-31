@@ -72,6 +72,7 @@ pnpm wrangler workflows trigger natbot-index   # after deploying; the daily cron
 ```sh
 pnpm dev      # the app, with the Worker and Durable Objects, at the printed localhost URL
 pnpm test     # unit tests, including a check that the Profile stays within its token budget
+pnpm test:workerd # the Conversation Durable Object adapter, run inside workerd (workerd/, a separate pnpm workspace package: @cloudflare/vitest-pool-workers only supports Vitest 4, one major behind the root project's)
 pnpm eval     # the adversarial eval against real Workers AI; EVAL_MODEL=<model> compares another model, EVAL_RUNS=3 repeats cases
 ```
 

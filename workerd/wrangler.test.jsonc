@@ -1,0 +1,22 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "natbot-workerd-tests",
+  "main": "../src/worker/index.ts",
+  // vitest-pool-workers@0.22.0 bundles a workerd binary that only understands compatibility dates up to
+  // 2026-08-22; wrangler.jsonc's real date (see there) fails to start under it. Test-only, so this can trail
+  // production until the pool bundles a newer workerd (issue #12).
+  "compatibility_date": "2026-08-22",
+  "compatibility_flags": ["nodejs_compat"],
+  // Only the bindings the Conversation Durable Object adapter tests touch (workerd/chat.do.ts). No `ai`,
+  // `vectorize`, `kv_namespaces` or `workflows`: those are exercised by `answer()`'s plain-Node tests
+  // (src/worker/answer.test.ts) instead. `ai`/`vectorize` would otherwise try a real remote connection
+  // (wrangler.jsonc marks them `remote: true`) just to start the worker; `kv_namespaces`/`workflows` carry
+  // no such flag, they're simply unneeded here.
+  "durable_objects": {
+    "bindings": [
+      { "name": "ChatAgent", "class_name": "ChatAgent" },
+      { "name": "Budget", "class_name": "Budget" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatAgent", "Budget"] }]
+}
